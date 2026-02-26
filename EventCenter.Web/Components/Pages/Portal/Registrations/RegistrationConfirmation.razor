@@ -1,0 +1,209 @@
+@page "/portal/registrations/{RegistrationId:int}/confirmation"
+@using EventCenter.Web.Services
+@using EventCenter.Web.Domain.Entities
+@using EventCenter.Web.Infrastructure.Helpers
+@using Microsoft.AspNetCore.Components.Authorization
+@attribute [Authorize(Roles = "Makler")]
+@inject RegistrationService RegistrationService
+@inject NavigationManager NavigationManager
+@inject AuthenticationStateProvider AuthStateProvider
+
+<PageTitle>Anmeldebestätigung - Veranstaltungscenter</PageTitle>
+
+@if (isLoading)
+{
+    <div class="text-center py-5">
+        <div class="spinner-border text-primary" role="status">
+            <span class="visually-hidden">Lädt...</span>
+        </div>
+        <p class="mt-2 text-muted">Anmeldung wird geladen...</p>
+    </div>
+}
+else if (registration == null)
+{
+    <div class="alert alert-danger">
+        <h4 class="alert-heading">Anmeldung nicht gefunden</h4>
+        <p>Die angeforderte Anmeldung konnte nicht gefunden werden.</p>
+        <a href="/portal/events" class="btn btn-primary">Zurück zur Übersicht</a>
+    </div>
+}
+else
+{
+    <div class="container py-4">
+        <!-- Success Banner -->
+        <div class="alert alert-success" role="alert">
+            <h4 class="alert-heading">
+                <i class="bi bi-check-circle-fill"></i> Anmeldung erfolgreich!
+            </h4>
+            <p class="mb-0">Ihre Anmeldung wurde erfolgreich registriert. Eine Bestätigungsmail wurde an <strong>@registration.Email</strong> gesendet.</p>
+        </div>
+
+        <!-- Registration Details Card -->
+        <div class="card mb-4">
+            <div class="card-header bg-primary text-white">
+                <h4 class="mb-0">Anmeldedetails</h4>
+            </div>
+            <div class="card-body">
+                <!-- Event Info -->
+                <div class="mb-4">
+                    <h5 class="border-bottom pb-2 mb-3">Veranstaltung</h5>
+                    <div class="row">
+                        <div class="col-md-8">
+                            <h6>@registration.Event.Title</h6>
+                            <p class="text-muted mb-2">
+                                <i class="bi bi-calendar-event"></i>
+                                @TimeZoneHelper.FormatDateTimeCet(DateTime.SpecifyKind(registration.Event.StartDateUtc, DateTimeKind.Utc), "dd.MM.yyyy HH:mm")
+                                bis
+                                @TimeZoneHelper.FormatDateTimeCet(DateTime.SpecifyKind(registration.Event.EndDateUtc, DateTimeKind.Utc), "dd.MM.yyyy HH:mm")
+                            </p>
+                            <p class="text-muted mb-0">
+                                <i class="bi bi-geo-alt"></i>
+                                @registration.Event.Location
+                            </p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Personal Info -->
+                <div class="mb-4">
+                    <h5 class="border-bottom pb-2 mb-3">Persönliche Daten</h5>
+                    <div class="row">
+                        <div class="col-md-6">
+                            <p class="mb-1"><strong>Name:</strong></p>
+                            <p>@registration.FirstName @registration.LastName</p>
+                        </div>
+                        <div class="col-md-6">
+                            <p class="mb-1"><strong>E-Mail:</strong></p>
+                            <p>@registration.Email</p>
+                        </div>
+                    </div>
+                    @if (!string.IsNullOrWhiteSpace(registration.Phone) || !string.IsNullOrWhiteSpace(registration.Company))
+                    {
+                        <div class="row">
+                            @if (!string.IsNullOrWhiteSpace(registration.Phone))
+                            {
+                                <div class="col-md-6">
+                                    <p class="mb-1"><strong>Telefon:</strong></p>
+                                    <p>@registration.Phone</p>
+                                </div>
+                            }
+                            @if (!string.IsNullOrWhiteSpace(registration.Company))
+                            {
+                                <div class="col-md-6">
+                                    <p class="mb-1"><strong>Firma:</strong></p>
+                                    <p>@registration.Company</p>
+                                </div>
+                            }
+                        </div>
+                    }
+                </div>
+
+                <!-- Selected Agenda Items -->
+                <div class="mb-0">
+                    <h5 class="border-bottom pb-2 mb-3">Ausgewählte Agendapunkte</h5>
+                    @if (registration.RegistrationAgendaItems != null && registration.RegistrationAgendaItems.Any())
+                    {
+                        <div class="list-group mb-3">
+                            @foreach (var rai in registration.RegistrationAgendaItems.OrderBy(r => r.AgendaItem.StartDateTimeUtc))
+                            {
+                                <div class="list-group-item">
+                                    <div class="d-flex w-100 justify-content-between align-items-start">
+                                        <div>
+                                            <h6 class="mb-1">@rai.AgendaItem.Title</h6>
+                                            <p class="mb-0 text-muted small">
+                                                <i class="bi bi-clock"></i>
+                                                @TimeZoneHelper.FormatDateTimeCet(DateTime.SpecifyKind(rai.AgendaItem.StartDateTimeUtc, DateTimeKind.Utc), "dd.MM.yyyy HH:mm")
+                                                - @TimeZoneHelper.FormatDateTimeCet(DateTime.SpecifyKind(rai.AgendaItem.EndDateTimeUtc, DateTimeKind.Utc), "HH:mm")
+                                            </p>
+                                        </div>
+                                        <div class="text-end">
+                                            @if (rai.AgendaItem.CostForMakler > 0)
+                                            {
+                                                <span class="badge bg-primary">@rai.AgendaItem.CostForMakler.ToString("N2") EUR</span>
+                                            }
+                                            else
+                                            {
+                                                <span class="badge bg-success">Kostenfrei</span>
+                                            }
+                                        </div>
+                                    </div>
+                                </div>
+                            }
+                        </div>
+
+                        <!-- Total Cost -->
+                        <div class="card bg-light">
+                            <div class="card-body">
+                                <div class="d-flex justify-content-between align-items-center">
+                                    <h5 class="mb-0">Gesamtkosten:</h5>
+                                    <h5 class="mb-0 text-primary">
+                                        @{
+                                            var totalCost = registration.RegistrationAgendaItems.Sum(rai => rai.AgendaItem.CostForMakler);
+                                        }
+                                        @totalCost.ToString("N2") EUR
+                                    </h5>
+                                </div>
+                            </div>
+                        </div>
+                    }
+                    else
+                    {
+                        <p class="text-muted">Keine Agendapunkte ausgewählt.</p>
+                    }
+                </div>
+            </div>
+        </div>
+
+        <!-- Action Buttons -->
+        <div class="d-flex justify-content-between flex-wrap gap-2">
+            <a href="/portal/events" class="btn btn-outline-secondary">
+                <i class="bi bi-arrow-left"></i> Zurück zur Übersicht
+            </a>
+            <a href="/api/events/@registration.EventId/calendar" class="btn btn-outline-primary">
+                <i class="bi bi-calendar-plus"></i> Termin in Kalender speichern (iCal)
+            </a>
+        </div>
+
+        <!-- Additional Info -->
+        <div class="alert alert-info mt-4">
+            <i class="bi bi-info-circle"></i>
+            <strong>Hinweis:</strong> Sie erhalten in Kürze eine Bestätigungsmail mit allen Details zu Ihrer Anmeldung.
+        </div>
+    </div>
+}
+
+@code {
+    [Parameter]
+    public int RegistrationId { get; set; }
+
+    private Registration? registration;
+    private bool isLoading = true;
+    private string userEmail = string.Empty;
+
+    protected override async Task OnInitializedAsync()
+    {
+        try
+        {
+            // Get user email from authentication state
+            var authState = await AuthStateProvider.GetAuthenticationStateAsync();
+            var user = authState.User;
+            userEmail = user.FindFirst("preferred_username")?.Value
+                ?? user.FindFirst("email")?.Value
+                ?? string.Empty;
+
+            // Load registration with details
+            registration = await RegistrationService.GetRegistrationWithDetailsAsync(RegistrationId);
+
+            // Verify the logged-in user owns this registration
+            if (registration == null || !registration.Email.Equals(userEmail, StringComparison.OrdinalIgnoreCase))
+            {
+                NavigationManager.NavigateTo("/portal/events");
+                return;
+            }
+        }
+        finally
+        {
+            isLoading = false;
+        }
+    }
+}
