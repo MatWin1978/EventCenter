@@ -135,4 +135,14 @@ app.MapGet("/auth/signout", async (HttpContext context) =>
 app.MapRazorComponents<App>()
     .AddInteractiveServerRenderMode();
 
+// Apply migrations automatically in Development environment
+if (app.Environment.IsDevelopment())
+{
+    using var scope = app.Services.CreateScope();
+    var dbContext = scope.ServiceProvider.GetRequiredService<EventCenterDbContext>();
+
+    // Apply pending migrations
+    dbContext.Database.Migrate();
+}
+
 app.Run();
