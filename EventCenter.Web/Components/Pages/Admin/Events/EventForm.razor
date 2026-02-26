@@ -1,0 +1,357 @@
+@page "/admin/events/create"
+@page "/admin/events/edit/{EventId:int}"
+@using EventCenter.Web.Domain.Entities
+@using EventCenter.Web.Services
+@using EventCenter.Web.Infrastructure.Helpers
+@using Microsoft.AspNetCore.Authorization
+@using Microsoft.AspNetCore.Components.Forms
+@using Blazored.FluentValidation
+@attribute [Authorize(Roles = "Admin")]
+@layout MainLayout
+@inject EventService EventService
+@inject NavigationManager NavigationManager
+
+<div class="container mt-4">
+    <div class="row">
+        <div class="col-lg-10 offset-lg-1">
+            <h2>@(isEditMode ? "Veranstaltung bearbeiten" : "Neue Veranstaltung anlegen")</h2>
+
+            @if (!string.IsNullOrEmpty(errorMessage))
+            {
+                <div class="alert alert-danger" role="alert">
+                    @errorMessage
+                </div>
+            }
+
+            @if (!string.IsNullOrEmpty(successMessage))
+            {
+                <div class="alert alert-success" role="alert">
+                    @successMessage
+                </div>
+            }
+
+            <EditForm Model="@Model" OnValidSubmit="@HandleValidSubmit">
+                <FluentValidationValidator />
+                <ValidationSummary />
+
+                <!-- Section 1: Grunddaten (Basic Info) -->
+                <div class="card mb-4">
+                    <div class="card-header">
+                        <h4 class="mb-0">Grunddaten</h4>
+                    </div>
+                    <div class="card-body">
+                        <div class="mb-3">
+                            <label for="title" class="form-label">Titel *</label>
+                            <InputText id="title" class="form-control" @bind-Value="Model.Title" />
+                            <ValidationMessage For="@(() => Model.Title)" />
+                        </div>
+
+                        <div class="mb-3">
+                            <label for="description" class="form-label">Beschreibung</label>
+                            <InputTextArea id="description" class="form-control" rows="4" @bind-Value="Model.Description" />
+                            <ValidationMessage For="@(() => Model.Description)" />
+                        </div>
+
+                        <div class="mb-3">
+                            <label for="location" class="form-label">Ort *</label>
+                            <InputText id="location" class="form-control" @bind-Value="Model.Location" />
+                            <ValidationMessage For="@(() => Model.Location)" />
+                        </div>
+
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <label for="maxCapacity" class="form-label">Maximale Kapazität</label>
+                                <InputNumber id="maxCapacity" class="form-control" @bind-Value="Model.MaxCapacity" />
+                                <ValidationMessage For="@(() => Model.MaxCapacity)" />
+                            </div>
+
+                            <div class="col-md-6 mb-3">
+                                <label for="maxCompanions" class="form-label">Maximale Begleitpersonen</label>
+                                <InputNumber id="maxCompanions" class="form-control" @bind-Value="Model.MaxCompanions" />
+                                <ValidationMessage For="@(() => Model.MaxCompanions)" />
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Section 2: Termine (Dates) -->
+                <div class="card mb-4">
+                    <div class="card-header">
+                        <h4 class="mb-0">Termine (CET)</h4>
+                    </div>
+                    <div class="card-body">
+                        <div class="mb-3">
+                            <label for="startDate" class="form-label">Startdatum (CET) *</label>
+                            <input type="datetime-local" id="startDate" class="form-control" @bind="startDateCet" />
+                            <ValidationMessage For="@(() => Model.StartDateUtc)" />
+                        </div>
+
+                        <div class="mb-3">
+                            <label for="endDate" class="form-label">Enddatum (CET) *</label>
+                            <input type="datetime-local" id="endDate" class="form-control" @bind="endDateCet" />
+                            <ValidationMessage For="@(() => Model.EndDateUtc)" />
+                        </div>
+
+                        <div class="mb-3">
+                            <label for="registrationDeadline" class="form-label">Anmeldefrist (CET) *</label>
+                            <input type="datetime-local" id="registrationDeadline" class="form-control" @bind="registrationDeadlineCet" />
+                            <ValidationMessage For="@(() => Model.RegistrationDeadlineUtc)" />
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Section 3: Kontaktperson (Contact Person) -->
+                <div class="card mb-4">
+                    <div class="card-header">
+                        <h4 class="mb-0">Kontaktperson</h4>
+                    </div>
+                    <div class="card-body">
+                        <div class="mb-3">
+                            <label for="contactName" class="form-label">Name</label>
+                            <InputText id="contactName" class="form-control" @bind-Value="Model.ContactName" />
+                            <ValidationMessage For="@(() => Model.ContactName)" />
+                        </div>
+
+                        <div class="mb-3">
+                            <label for="contactEmail" class="form-label">E-Mail</label>
+                            <InputText id="contactEmail" type="email" class="form-control" @bind-Value="Model.ContactEmail" />
+                            <ValidationMessage For="@(() => Model.ContactEmail)" />
+                        </div>
+
+                        <div class="mb-3">
+                            <label for="contactPhone" class="form-label">Telefon</label>
+                            <InputText id="contactPhone" class="form-control" @bind-Value="Model.ContactPhone" />
+                            <ValidationMessage For="@(() => Model.ContactPhone)" />
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Section 4: Dokumente (Documents) -->
+                <div class="card mb-4">
+                    <div class="card-header">
+                        <h4 class="mb-0">Dokumente</h4>
+                    </div>
+                    <div class="card-body">
+                        @if (Model.DocumentPaths.Any())
+                        {
+                            <ul class="list-group mb-3">
+                                @foreach (var docPath in Model.DocumentPaths.ToList())
+                                {
+                                    <li class="list-group-item d-flex justify-content-between align-items-center">
+                                        <span>@GetFileName(docPath)</span>
+                                        <button type="button" class="btn btn-sm btn-danger" @onclick="@(() => RemoveDocument(docPath))">
+                                            Entfernen
+                                        </button>
+                                    </li>
+                                }
+                            </ul>
+                        }
+
+                        <div class="mb-3">
+                            <label for="fileUpload" class="form-label">Dateien hochladen (PDF, JPG, PNG - max. 10 MB)</label>
+                            <InputFile id="fileUpload" OnChange="@HandleFileUpload" multiple accept=".pdf,.jpg,.png,.jpeg" class="form-control" />
+                        </div>
+
+                        @if (!string.IsNullOrEmpty(fileUploadError))
+                        {
+                            <div class="alert alert-warning" role="alert">
+                                @fileUploadError
+                            </div>
+                        }
+                    </div>
+                </div>
+
+                <!-- Form Buttons -->
+                <div class="d-flex justify-content-between mb-4">
+                    <a href="/admin/events" class="btn btn-secondary">Abbrechen</a>
+                    <button type="submit" class="btn btn-primary">Speichern</button>
+                </div>
+            </EditForm>
+        </div>
+    </div>
+</div>
+
+@code {
+    [Parameter]
+    public int? EventId { get; set; }
+
+    private Event Model { get; set; } = new Event();
+    private bool isEditMode = false;
+    private string? errorMessage;
+    private string? successMessage;
+    private string? fileUploadError;
+
+    // CET date fields for display (bound to form inputs)
+    private DateTime startDateCet;
+    private DateTime endDateCet;
+    private DateTime registrationDeadlineCet;
+
+    // File upload handling
+    private const long MaxFileSize = 10 * 1024 * 1024; // 10 MB
+    private List<IBrowserFile> queuedFiles = new();
+
+    protected override async Task OnInitializedAsync()
+    {
+        if (EventId.HasValue)
+        {
+            // Edit mode: Load existing event
+            isEditMode = true;
+            var evt = await EventService.GetEventByIdAsync(EventId.Value);
+
+            if (evt == null)
+            {
+                errorMessage = "Veranstaltung nicht gefunden.";
+                return;
+            }
+
+            Model = evt;
+
+            // Convert UTC dates to CET for display
+            startDateCet = TimeZoneHelper.ConvertUtcToCet(
+                DateTime.SpecifyKind(Model.StartDateUtc, DateTimeKind.Utc));
+            endDateCet = TimeZoneHelper.ConvertUtcToCet(
+                DateTime.SpecifyKind(Model.EndDateUtc, DateTimeKind.Utc));
+            registrationDeadlineCet = TimeZoneHelper.ConvertUtcToCet(
+                DateTime.SpecifyKind(Model.RegistrationDeadlineUtc, DateTimeKind.Utc));
+        }
+        else
+        {
+            // Create mode: Initialize with sensible defaults
+            var tomorrowUtc = DateTime.UtcNow.Date.AddDays(1);
+            Model = new Event
+            {
+                StartDateUtc = tomorrowUtc.AddHours(10), // 10 AM next day
+                EndDateUtc = tomorrowUtc.AddHours(18),    // 6 PM next day
+                RegistrationDeadlineUtc = tomorrowUtc.AddDays(-1), // Day before
+                MaxCapacity = 50,
+                MaxCompanions = 1
+            };
+
+            // Convert to CET for display
+            startDateCet = TimeZoneHelper.ConvertUtcToCet(
+                DateTime.SpecifyKind(Model.StartDateUtc, DateTimeKind.Utc));
+            endDateCet = TimeZoneHelper.ConvertUtcToCet(
+                DateTime.SpecifyKind(Model.EndDateUtc, DateTimeKind.Utc));
+            registrationDeadlineCet = TimeZoneHelper.ConvertUtcToCet(
+                DateTime.SpecifyKind(Model.RegistrationDeadlineUtc, DateTimeKind.Utc));
+        }
+    }
+
+    private async Task HandleValidSubmit()
+    {
+        try
+        {
+            // Convert CET dates back to UTC
+            Model.StartDateUtc = TimeZoneHelper.ConvertCetToUtc(startDateCet);
+            Model.EndDateUtc = TimeZoneHelper.ConvertCetToUtc(endDateCet);
+            Model.RegistrationDeadlineUtc = TimeZoneHelper.ConvertCetToUtc(registrationDeadlineCet);
+
+            if (isEditMode)
+            {
+                // Update existing event
+                await EventService.UpdateEventAsync(Model);
+                successMessage = "Veranstaltung erfolgreich aktualisiert.";
+            }
+            else
+            {
+                // Create new event
+                var createdEvent = await EventService.CreateEventAsync(Model);
+
+                // Upload queued files if any
+                if (queuedFiles.Any())
+                {
+                    foreach (var file in queuedFiles)
+                    {
+                        try
+                        {
+                            using var stream = file.OpenReadStream(MaxFileSize);
+                            var path = await EventService.SaveDocumentAsync(createdEvent.Id, file.Name, stream);
+                            createdEvent.DocumentPaths.Add(path);
+                        }
+                        catch (Exception ex)
+                        {
+                            fileUploadError = $"Fehler beim Hochladen von {file.Name}: {ex.Message}";
+                        }
+                    }
+
+                    // Update event with document paths
+                    if (createdEvent.DocumentPaths.Any())
+                    {
+                        await EventService.UpdateEventAsync(createdEvent);
+                    }
+
+                    queuedFiles.Clear();
+                }
+
+                successMessage = "Veranstaltung erfolgreich erstellt.";
+            }
+
+            // Navigate back to list after a short delay
+            await Task.Delay(1500);
+            NavigationManager.NavigateTo("/admin/events");
+        }
+        catch (Exception ex)
+        {
+            errorMessage = $"Fehler beim Speichern: {ex.Message}";
+        }
+    }
+
+    private async Task HandleFileUpload(InputFileChangeEventArgs e)
+    {
+        fileUploadError = null;
+
+        foreach (var file in e.GetMultipleFiles())
+        {
+            // Validate file size
+            if (file.Size > MaxFileSize)
+            {
+                fileUploadError = $"Datei {file.Name} überschreitet die maximale Größe von 10 MB";
+                continue;
+            }
+
+            if (isEditMode && Model.Id > 0)
+            {
+                // Edit mode: Upload immediately
+                try
+                {
+                    using var stream = file.OpenReadStream(MaxFileSize);
+                    var path = await EventService.SaveDocumentAsync(Model.Id, file.Name, stream);
+                    Model.DocumentPaths.Add(path);
+                }
+                catch (Exception ex)
+                {
+                    fileUploadError = $"Fehler beim Hochladen von {file.Name}: {ex.Message}";
+                }
+            }
+            else
+            {
+                // Create mode: Queue files for upload after event is created
+                queuedFiles.Add(file);
+            }
+        }
+
+        StateHasChanged();
+    }
+
+    private async Task RemoveDocument(string docPath)
+    {
+        try
+        {
+            await EventService.DeleteDocumentAsync(docPath);
+            Model.DocumentPaths.Remove(docPath);
+            StateHasChanged();
+        }
+        catch (Exception ex)
+        {
+            errorMessage = $"Fehler beim Löschen des Dokuments: {ex.Message}";
+        }
+    }
+
+    private string GetFileName(string path)
+    {
+        // Extract filename from path, removing GUID prefix
+        var fileName = Path.GetFileName(path);
+        var underscoreIndex = fileName.IndexOf('_');
+        return underscoreIndex > 0 ? fileName.Substring(underscoreIndex + 1) : fileName;
+    }
+}
