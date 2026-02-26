@@ -657,4 +657,303 @@ public class EventServiceTests : IDisposable
         var fullPath = Path.Combine(_tempDirectory, path.TrimStart('/').Replace('/', Path.DirectorySeparatorChar));
         Assert.False(File.Exists(fullPath));
     }
+
+    [Fact]
+    public async Task GetPublicEventsAsync_ReturnsOnlyPublished()
+    {
+        // Arrange
+        var publishedEvent = new Event
+        {
+            Title = "Published Event",
+            Location = "Location",
+            StartDateUtc = DateTime.UtcNow.AddDays(7),
+            EndDateUtc = DateTime.UtcNow.AddDays(8),
+            RegistrationDeadlineUtc = DateTime.UtcNow.AddDays(5),
+            MaxCapacity = 100,
+            MaxCompanions = 2,
+            IsPublished = true
+        };
+
+        var unpublishedEvent = new Event
+        {
+            Title = "Unpublished Event",
+            Location = "Location",
+            StartDateUtc = DateTime.UtcNow.AddDays(10),
+            EndDateUtc = DateTime.UtcNow.AddDays(11),
+            RegistrationDeadlineUtc = DateTime.UtcNow.AddDays(8),
+            MaxCapacity = 100,
+            MaxCompanions = 2,
+            IsPublished = false
+        };
+
+        _context.Events.AddRange(publishedEvent, unpublishedEvent);
+        await _context.SaveChangesAsync();
+
+        // Act
+        var result = await _service.GetPublicEventsAsync(null, null, null, null);
+
+        // Assert
+        Assert.Single(result);
+        Assert.Equal("Published Event", result[0].Title);
+    }
+
+    [Fact]
+    public async Task GetPublicEventsAsync_SearchByTitle()
+    {
+        // Arrange
+        var events = new[]
+        {
+            new Event
+            {
+                Title = "React Workshop",
+                Location = "Berlin",
+                StartDateUtc = DateTime.UtcNow.AddDays(7),
+                EndDateUtc = DateTime.UtcNow.AddDays(8),
+                RegistrationDeadlineUtc = DateTime.UtcNow.AddDays(5),
+                MaxCapacity = 100,
+                MaxCompanions = 2,
+                IsPublished = true
+            },
+            new Event
+            {
+                Title = "Angular Conference",
+                Location = "Munich",
+                StartDateUtc = DateTime.UtcNow.AddDays(10),
+                EndDateUtc = DateTime.UtcNow.AddDays(11),
+                RegistrationDeadlineUtc = DateTime.UtcNow.AddDays(8),
+                MaxCapacity = 100,
+                MaxCompanions = 2,
+                IsPublished = true
+            },
+            new Event
+            {
+                Title = "Vue Meetup",
+                Location = "Hamburg",
+                StartDateUtc = DateTime.UtcNow.AddDays(14),
+                EndDateUtc = DateTime.UtcNow.AddDays(15),
+                RegistrationDeadlineUtc = DateTime.UtcNow.AddDays(12),
+                MaxCapacity = 100,
+                MaxCompanions = 2,
+                IsPublished = true
+            }
+        };
+
+        _context.Events.AddRange(events);
+        await _context.SaveChangesAsync();
+
+        // Act
+        var result = await _service.GetPublicEventsAsync("Workshop", null, null, null);
+
+        // Assert
+        Assert.Single(result);
+        Assert.Equal("React Workshop", result[0].Title);
+    }
+
+    [Fact]
+    public async Task GetPublicEventsAsync_SearchByLocation()
+    {
+        // Arrange
+        var events = new[]
+        {
+            new Event
+            {
+                Title = "Event 1",
+                Location = "Berlin",
+                StartDateUtc = DateTime.UtcNow.AddDays(7),
+                EndDateUtc = DateTime.UtcNow.AddDays(8),
+                RegistrationDeadlineUtc = DateTime.UtcNow.AddDays(5),
+                MaxCapacity = 100,
+                MaxCompanions = 2,
+                IsPublished = true
+            },
+            new Event
+            {
+                Title = "Event 2",
+                Location = "Munich",
+                StartDateUtc = DateTime.UtcNow.AddDays(10),
+                EndDateUtc = DateTime.UtcNow.AddDays(11),
+                RegistrationDeadlineUtc = DateTime.UtcNow.AddDays(8),
+                MaxCapacity = 100,
+                MaxCompanions = 2,
+                IsPublished = true
+            },
+            new Event
+            {
+                Title = "Event 3",
+                Location = "Berlin Mitte",
+                StartDateUtc = DateTime.UtcNow.AddDays(14),
+                EndDateUtc = DateTime.UtcNow.AddDays(15),
+                RegistrationDeadlineUtc = DateTime.UtcNow.AddDays(12),
+                MaxCapacity = 100,
+                MaxCompanions = 2,
+                IsPublished = true
+            }
+        };
+
+        _context.Events.AddRange(events);
+        await _context.SaveChangesAsync();
+
+        // Act
+        var result = await _service.GetPublicEventsAsync("Berlin", null, null, null);
+
+        // Assert
+        Assert.Equal(2, result.Count);
+        Assert.All(result, e => Assert.Contains("Berlin", e.Location));
+    }
+
+    [Fact]
+    public async Task GetPublicEventsAsync_FilterByDateRange()
+    {
+        // Arrange
+        var events = new[]
+        {
+            new Event
+            {
+                Title = "Event 1",
+                Location = "Location",
+                StartDateUtc = new DateTime(2026, 3, 1, 10, 0, 0, DateTimeKind.Utc),
+                EndDateUtc = new DateTime(2026, 3, 2, 16, 0, 0, DateTimeKind.Utc),
+                RegistrationDeadlineUtc = new DateTime(2026, 2, 25, 23, 59, 59, DateTimeKind.Utc),
+                MaxCapacity = 100,
+                MaxCompanions = 2,
+                IsPublished = true
+            },
+            new Event
+            {
+                Title = "Event 2",
+                Location = "Location",
+                StartDateUtc = new DateTime(2026, 4, 15, 10, 0, 0, DateTimeKind.Utc),
+                EndDateUtc = new DateTime(2026, 4, 16, 16, 0, 0, DateTimeKind.Utc),
+                RegistrationDeadlineUtc = new DateTime(2026, 4, 10, 23, 59, 59, DateTimeKind.Utc),
+                MaxCapacity = 100,
+                MaxCompanions = 2,
+                IsPublished = true
+            },
+            new Event
+            {
+                Title = "Event 3",
+                Location = "Location",
+                StartDateUtc = new DateTime(2026, 6, 20, 10, 0, 0, DateTimeKind.Utc),
+                EndDateUtc = new DateTime(2026, 6, 21, 16, 0, 0, DateTimeKind.Utc),
+                RegistrationDeadlineUtc = new DateTime(2026, 6, 15, 23, 59, 59, DateTimeKind.Utc),
+                MaxCapacity = 100,
+                MaxCompanions = 2,
+                IsPublished = true
+            }
+        };
+
+        _context.Events.AddRange(events);
+        await _context.SaveChangesAsync();
+
+        // Act
+        var result = await _service.GetPublicEventsAsync(
+            null,
+            new DateTime(2026, 4, 1, 0, 0, 0, DateTimeKind.Utc),
+            new DateTime(2026, 5, 31, 23, 59, 59, DateTimeKind.Utc),
+            null);
+
+        // Assert
+        Assert.Single(result);
+        Assert.Equal("Event 2", result[0].Title);
+    }
+
+    [Fact]
+    public async Task GetPublicEventsAsync_SortsByStartDateAscending()
+    {
+        // Arrange
+        var events = new[]
+        {
+            new Event
+            {
+                Title = "Event 3",
+                Location = "Location",
+                StartDateUtc = DateTime.UtcNow.AddDays(20),
+                EndDateUtc = DateTime.UtcNow.AddDays(21),
+                RegistrationDeadlineUtc = DateTime.UtcNow.AddDays(18),
+                MaxCapacity = 100,
+                MaxCompanions = 2,
+                IsPublished = true
+            },
+            new Event
+            {
+                Title = "Event 1",
+                Location = "Location",
+                StartDateUtc = DateTime.UtcNow.AddDays(7),
+                EndDateUtc = DateTime.UtcNow.AddDays(8),
+                RegistrationDeadlineUtc = DateTime.UtcNow.AddDays(5),
+                MaxCapacity = 100,
+                MaxCompanions = 2,
+                IsPublished = true
+            },
+            new Event
+            {
+                Title = "Event 2",
+                Location = "Location",
+                StartDateUtc = DateTime.UtcNow.AddDays(14),
+                EndDateUtc = DateTime.UtcNow.AddDays(15),
+                RegistrationDeadlineUtc = DateTime.UtcNow.AddDays(12),
+                MaxCapacity = 100,
+                MaxCompanions = 2,
+                IsPublished = true
+            }
+        };
+
+        _context.Events.AddRange(events);
+        await _context.SaveChangesAsync();
+
+        // Act
+        var result = await _service.GetPublicEventsAsync(null, null, null, null);
+
+        // Assert
+        Assert.Equal(3, result.Count);
+        Assert.Equal("Event 1", result[0].Title);
+        Assert.Equal("Event 2", result[1].Title);
+        Assert.Equal("Event 3", result[2].Title);
+    }
+
+    [Fact]
+    public async Task GetPublicEventsAsync_IncludesRegistrationCount()
+    {
+        // Arrange
+        var evt = new Event
+        {
+            Title = "Test Event",
+            Location = "Location",
+            StartDateUtc = DateTime.UtcNow.AddDays(7),
+            EndDateUtc = DateTime.UtcNow.AddDays(8),
+            RegistrationDeadlineUtc = DateTime.UtcNow.AddDays(5),
+            MaxCapacity = 100,
+            MaxCompanions = 2,
+            IsPublished = true
+        };
+        _context.Events.Add(evt);
+        await _context.SaveChangesAsync();
+
+        _context.Registrations.AddRange(
+            new Registration
+            {
+                EventId = evt.Id,
+                Email = "user1@example.com",
+                FirstName = "User",
+                LastName = "One",
+                RegistrationDateUtc = DateTime.UtcNow
+            },
+            new Registration
+            {
+                EventId = evt.Id,
+                Email = "user2@example.com",
+                FirstName = "User",
+                LastName = "Two",
+                RegistrationDateUtc = DateTime.UtcNow
+            }
+        );
+        await _context.SaveChangesAsync();
+
+        // Act
+        var result = await _service.GetPublicEventsAsync(null, null, null, null);
+
+        // Assert
+        Assert.Single(result);
+        Assert.Equal(2, result[0].Registrations.Count);
+    }
 }
