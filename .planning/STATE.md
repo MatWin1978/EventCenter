@@ -3,12 +3,12 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: unknown
-last_updated: "2026-02-26T16:10:57.846Z"
+last_updated: "2026-02-26T16:14:39.206Z"
 progress:
   total_phases: 2
   completed_phases: 1
   total_plans: 8
-  completed_plans: 5
+  completed_plans: 7
 ---
 
 # Project State
@@ -23,30 +23,31 @@ See: .planning/PROJECT.md (updated 2026-02-26)
 ## Current Position
 
 Phase: 2 of 8 (Admin Event Management)
-Plan: 1 of 4
+Plan: 2 of 4
 Status: In progress
-Last activity: 2026-02-26 - Completed plan 02-01 (Domain Layer Extensions)
+Last activity: 2026-02-26 - Completed plan 02-02 (EventService with CRUD Operations)
 
-Progress: [████░░░░░░] 62.5% (1/8 phases, 5/8 plans completed)
+Progress: [████░░░░░░] 75.0% (1/8 phases, 6/8 plans completed)
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 5
-- Average duration: 6.4 minutes
-- Total execution time: 0.53 hours
+- Total plans completed: 6
+- Average duration: 7.3 minutes
+- Total execution time: 0.74 hours
 
 **By Phase:**
 
 | Phase | Plans | Total | Avg/Plan |
 |-------|-------|-------|----------|
 | 01 | 4 | 1303s | 325.8s |
-| 02 | 1 | 492s | 492.0s |
+| 02 | 2 | 1236s | 618.0s |
 
 **Recent Plans:**
 
 | Phase-Plan | Duration | Tasks | Files | Date |
 |------------|----------|-------|-------|------|
+| 02-02 | 744s (12.4m) | 2 | 3 | 2026-02-26 |
 | 02-01 | 492s (8.2m) | 2 | 15 | 2026-02-26 |
 | 01-04 | 383s (6.4m) | 3 | 11 | 2026-02-26 |
 | 01-03 | 246s (4.1m) | 3 | 8 | 2026-02-26 |
@@ -76,6 +77,9 @@ Recent decisions affecting current work:
 - [Phase 02]: Remove provider-specific HasColumnType calls for SQLite test compatibility
 - [Phase 02]: EventState calculation uses TimeZoneHelper for consistent timezone handling
 - [Phase 02]: Nested validation for collections using RuleForEach with SetValidator
+- [Phase 02-02]: Use service layer pattern to separate business logic from UI components
+- [Phase 02-02]: Store uploaded documents in wwwroot/uploads/events/{eventId}/ with GUID-prefixed filenames
+- [Phase 02-02]: Block unpublish/delete operations when registrations exist (German error messages)
 
 ### Pending Todos
 
@@ -94,5 +98,5 @@ None yet.
 ## Session Continuity
 
 Last session: 2026-02-26
-Stopped at: Completed 02-01-PLAN.md execution
-Resume file: .planning/phases/02-admin-event-management/02-01-SUMMARY.md
+Stopped at: Completed 02-02-PLAN.md execution
+Resume file: .planning/phases/02-admin-event-management/02-02-SUMMARY.md

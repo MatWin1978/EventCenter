@@ -13,9 +13,9 @@
 
 ### Veranstaltungsverwaltung (Admin)
 
-- [ ] **EVNT-01**: Admin kann Präsenzveranstaltung anlegen (US-01)
-- [ ] **EVNT-02**: Admin kann Veranstaltung bearbeiten (US-02)
-- [ ] **EVNT-03**: Admin kann Veranstaltung veröffentlichen/zurückziehen (US-03)
+- [x] **EVNT-01**: Admin kann Präsenzveranstaltung anlegen (US-01)
+- [x] **EVNT-02**: Admin kann Veranstaltung bearbeiten (US-02)
+- [x] **EVNT-03**: Admin kann Veranstaltung veröffentlichen/zurückziehen (US-03)
 - [x] **EVNT-04**: System berechnet EventState automatisch (Public, DeadlineReached, Finished)
 
 ### Webinar-Verwaltung (Admin)
@@ -32,7 +32,7 @@
 ### Zusatzoptionen (Admin)
 
 - [x] **XOPT-01**: Admin kann Zusatzoptionen anlegen, bearbeiten und löschen (US-07)
-- [ ] **XOPT-02**: System verhindert Löschen bereits gebuchter Zusatzoptionen
+- [x] **XOPT-02**: System verhindert Löschen bereits gebuchter Zusatzoptionen
 
 ### Firmeneinladungen (Admin)
 
@@ -129,9 +129,9 @@
 | AUTH-01 | Phase 1 | Complete |
 | AUTH-02 | Phase 1 | Complete |
 | AUTH-03 | Phase 5 | Pending |
-| EVNT-01 | Phase 2 | Pending |
-| EVNT-02 | Phase 2 | Pending |
-| EVNT-03 | Phase 2 | Pending |
+| EVNT-01 | Phase 2 | Complete |
+| EVNT-02 | Phase 2 | Complete |
+| EVNT-03 | Phase 2 | Complete |
 | EVNT-04 | Phase 2 | Complete |
 | WBNR-01 | Phase 8 | Pending |
 | WBNR-02 | Phase 8 | Pending |
@@ -139,7 +139,7 @@
 | AGND-02 | Phase 2 | Pending |
 | AGND-03 | Phase 2 | Complete |
 | XOPT-01 | Phase 2 | Complete |
-| XOPT-02 | Phase 2 | Pending |
+| XOPT-02 | Phase 2 | Complete |
 | COMP-01 | Phase 4 | Pending |
 | COMP-02 | Phase 4 | Pending |
 | COMP-03 | Phase 4 | Pending |
