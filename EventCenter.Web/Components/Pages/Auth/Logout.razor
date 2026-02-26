@@ -1,0 +1,12 @@
+@page "/auth/logout"
+@using Microsoft.AspNetCore.Authentication
+@using Microsoft.AspNetCore.Authentication.Cookies
+@using Microsoft.AspNetCore.Authentication.OpenIdConnect
+@inject NavigationManager Navigation
+
+@code {
+    protected override async Task OnInitializedAsync()
+    {
+        Navigation.NavigateTo("/auth/signout", forceLoad: true);
+    }
+}

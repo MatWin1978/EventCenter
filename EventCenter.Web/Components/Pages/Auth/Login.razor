@@ -1,0 +1,15 @@
+@page "/auth/login"
+@using Microsoft.AspNetCore.Authentication
+@using Microsoft.AspNetCore.Authentication.OpenIdConnect
+@inject NavigationManager Navigation
+
+@code {
+    [SupplyParameterFromQuery]
+    public string? ReturnUrl { get; set; }
+
+    protected override async Task OnInitializedAsync()
+    {
+        var returnUrl = ReturnUrl ?? "/";
+        Navigation.NavigateTo($"/auth/challenge?returnUrl={Uri.EscapeDataString(returnUrl)}", forceLoad: true);
+    }
+}
