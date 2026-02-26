@@ -33,5 +33,20 @@ public class EventValidator : AbstractValidator<Event>
 
         RuleFor(e => e.MaxCompanions)
             .GreaterThanOrEqualTo(0).WithMessage("Maximale Begleitpersonen darf nicht negativ sein");
+
+        RuleFor(e => e.ContactEmail)
+            .EmailAddress()
+            .When(e => !string.IsNullOrEmpty(e.ContactEmail))
+            .WithMessage("Ungültige E-Mail-Adresse");
+
+        RuleFor(e => e.ContactPhone)
+            .MaximumLength(50)
+            .WithMessage("Telefonnummer darf maximal 50 Zeichen lang sein");
+
+        RuleForEach(e => e.AgendaItems)
+            .SetValidator(new EventAgendaItemValidator());
+
+        RuleForEach(e => e.EventOptions)
+            .SetValidator(new EventOptionValidator());
     }
 }

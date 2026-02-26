@@ -20,12 +20,10 @@ public class EventAgendaItemConfiguration : IEntityTypeConfiguration<EventAgenda
             .HasMaxLength(2000);
 
         builder.Property(a => a.StartDateTimeUtc)
-            .IsRequired()
-            .HasColumnType("datetime2");
+            .IsRequired();
 
         builder.Property(a => a.EndDateTimeUtc)
-            .IsRequired()
-            .HasColumnType("datetime2");
+            .IsRequired();
 
         builder.Property(a => a.CostForMakler)
             .IsRequired()

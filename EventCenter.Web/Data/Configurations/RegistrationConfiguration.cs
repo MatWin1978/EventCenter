@@ -36,8 +36,7 @@ public class RegistrationConfiguration : IEntityTypeConfiguration<Registration>
             .HasMaxLength(200);
 
         builder.Property(r => r.RegistrationDateUtc)
-            .IsRequired()
-            .HasColumnType("datetime2");
+            .IsRequired();
 
         builder.Property(r => r.IsConfirmed)
             .IsRequired();

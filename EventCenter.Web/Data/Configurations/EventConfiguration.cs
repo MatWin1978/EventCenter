@@ -25,16 +25,13 @@ public class EventConfiguration : IEntityTypeConfiguration<Event>
             .HasMaxLength(200);
 
         builder.Property(e => e.StartDateUtc)
-            .IsRequired()
-            .HasColumnType("datetime2");
+            .IsRequired();
 
         builder.Property(e => e.EndDateUtc)
-            .IsRequired()
-            .HasColumnType("datetime2");
+            .IsRequired();
 
         builder.Property(e => e.RegistrationDeadlineUtc)
-            .IsRequired()
-            .HasColumnType("datetime2");
+            .IsRequired();
 
         builder.Property(e => e.MaxCapacity)
             .IsRequired();
@@ -57,8 +54,7 @@ public class EventConfiguration : IEntityTypeConfiguration<Event>
         builder.Property(e => e.DocumentPaths)
             .HasConversion(
                 v => JsonSerializer.Serialize(v, (JsonSerializerOptions?)null),
-                v => JsonSerializer.Deserialize<List<string>>(v, (JsonSerializerOptions?)null) ?? new List<string>())
-            .HasColumnType("nvarchar(max)");
+                v => JsonSerializer.Deserialize<List<string>>(v, (JsonSerializerOptions?)null) ?? new List<string>());
 
         // Index on IsPublished for filtering published events
         builder.HasIndex(e => e.IsPublished);

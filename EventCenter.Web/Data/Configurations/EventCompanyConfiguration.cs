@@ -32,8 +32,7 @@ public class EventCompanyConfiguration : IEntityTypeConfiguration<EventCompany>
         builder.Property(c => c.InvitationCode)
             .HasMaxLength(100);
 
-        builder.Property(c => c.InvitationSentUtc)
-            .HasColumnType("datetime2");
+        builder.Property(c => c.InvitationSentUtc);
 
         // Index on EventId for faster lookup
         builder.HasIndex(c => c.EventId);
