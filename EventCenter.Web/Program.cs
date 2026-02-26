@@ -1,6 +1,8 @@
 using EventCenter.Web.Components;
 using EventCenter.Web.Domain;
 using EventCenter.Web.Infrastructure.Authentication;
+using EventCenter.Web.Validators;
+using FluentValidation;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authentication.Cookies;
@@ -31,6 +33,9 @@ builder.Services.AddDbContext<EventCenterDbContext>(options =>
         })
     .EnableSensitiveDataLogging(builder.Environment.IsDevelopment())
     .EnableDetailedErrors(builder.Environment.IsDevelopment()));
+
+// Configure FluentValidation
+builder.Services.AddValidatorsFromAssemblyContaining<EventValidator>();
 
 // Configure Authentication with Keycloak OIDC
 builder.Services.AddAuthentication(options =>
