@@ -1,0 +1,355 @@
+@page "/admin/events"
+@attribute [Authorize(Roles = "Admin")]
+@layout MainLayout
+@using EventCenter.Web.Domain.Entities
+@using EventCenter.Web.Domain.Extensions
+@using EventCenter.Web.Services
+@using EventCenter.Web.Infrastructure.Helpers
+@using EventCenter.Web.Components.Shared
+@inject EventService EventService
+@inject NavigationManager NavigationManager
+
+<PageTitle>Veranstaltungen - Admin</PageTitle>
+
+<div class="container-fluid">
+    <div class="row mb-3">
+        <div class="col">
+            <h2>Veranstaltungen</h2>
+        </div>
+        <div class="col text-end">
+            <button class="btn btn-primary" @onclick="@(() => NavigationManager.NavigateTo("/admin/events/create"))">
+                <span class="bi bi-plus-circle"></span> Neue Veranstaltung
+            </button>
+        </div>
+    </div>
+
+    <div class="row mb-3">
+        <div class="col">
+            <div class="form-check">
+                <input class="form-check-input" type="checkbox" id="showPastCheckbox" @bind="showPast" @bind:after="TogglePast" />
+                <label class="form-check-label" for="showPastCheckbox">
+                    Vergangene anzeigen
+                </label>
+            </div>
+        </div>
+    </div>
+
+    @if (errorMessage != null)
+    {
+        <div class="alert alert-danger alert-dismissible fade show" role="alert">
+            @errorMessage
+            <button type="button" class="btn-close" @onclick="@(() => errorMessage = null)"></button>
+        </div>
+    }
+
+    @if (isLoading)
+    {
+        <div class="text-center my-5">
+            <div class="spinner-border" role="status">
+                <span class="visually-hidden">Lade Veranstaltungen...</span>
+            </div>
+            <p class="mt-2">Lade Veranstaltungen...</p>
+        </div>
+    }
+    else if (events.Count == 0)
+    {
+        <div class="alert alert-info">
+            Keine Veranstaltungen gefunden.
+        </div>
+    }
+    else
+    {
+        <div class="table-responsive">
+            <table class="table table-striped table-hover">
+                <thead>
+                    <tr>
+                        <th>
+                            <button class="btn btn-link text-decoration-none p-0" @onclick="@(() => SortBy("Title"))">
+                                Titel
+                                @if (currentSortColumn == "Title")
+                                {
+                                    <span class="bi @(ascending ? "bi-arrow-up" : "bi-arrow-down")"></span>
+                                }
+                            </button>
+                        </th>
+                        <th>
+                            <button class="btn btn-link text-decoration-none p-0" @onclick="@(() => SortBy("StartDateUtc"))">
+                                Datum
+                                @if (currentSortColumn == "StartDateUtc")
+                                {
+                                    <span class="bi @(ascending ? "bi-arrow-up" : "bi-arrow-down")"></span>
+                                }
+                            </button>
+                        </th>
+                        <th>
+                            <button class="btn btn-link text-decoration-none p-0" @onclick="@(() => SortBy("Location"))">
+                                Ort
+                                @if (currentSortColumn == "Location")
+                                {
+                                    <span class="bi @(ascending ? "bi-arrow-up" : "bi-arrow-down")"></span>
+                                }
+                            </button>
+                        </th>
+                        <th>Status</th>
+                        <th>Anmeldungen</th>
+                        <th>Veröffentlicht</th>
+                        <th>Aktionen</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var evt in events)
+                    {
+                        <tr>
+                            <td>@evt.Title</td>
+                            <td>@TimeZoneHelper.FormatDateTimeCet(evt.StartDateUtc)</td>
+                            <td>@evt.Location</td>
+                            <td><EventStatusBadge State="@evt.GetCurrentState()" /></td>
+                            <td>@evt.GetCurrentRegistrationCount()/@evt.MaxCapacity</td>
+                            <td>
+                                @if (evt.IsPublished)
+                                {
+                                    <span class="bi bi-check-circle-fill text-success"></span>
+                                }
+                            </td>
+                            <td>
+                                <div class="btn-group btn-group-sm" role="group">
+                                    <button class="btn btn-outline-primary" @onclick="@(() => NavigationManager.NavigateTo($"/admin/events/edit/{evt.Id}"))">
+                                        <span class="bi bi-pencil"></span> Bearbeiten
+                                    </button>
+                                    @if (evt.IsPublished)
+                                    {
+                                        <button class="btn btn-outline-warning" @onclick="@(() => ShowUnpublishConfirm(evt.Id))">
+                                            <span class="bi bi-eye-slash"></span> Zurückziehen
+                                        </button>
+                                    }
+                                    else
+                                    {
+                                        <button class="btn btn-outline-success" @onclick="@(() => ShowPublishConfirm(evt.Id))">
+                                            <span class="bi bi-eye"></span> Veröffentlichen
+                                        </button>
+                                    }
+                                    <button class="btn btn-outline-info" @onclick="@(() => DuplicateEvent(evt.Id))">
+                                        <span class="bi bi-files"></span> Duplizieren
+                                    </button>
+                                    <button class="btn btn-outline-danger" @onclick="@(() => ShowDeleteConfirm(evt.Id))">
+                                        <span class="bi bi-trash"></span> Löschen
+                                    </button>
+                                </div>
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+
+        <!-- Pagination -->
+        <div class="row mt-3">
+            <div class="col">
+                <p>Zeige @((currentPage - 1) * pageSize + 1)-@Math.Min(currentPage * pageSize, totalCount) von @totalCount Veranstaltungen</p>
+            </div>
+            <div class="col text-end">
+                <nav>
+                    <ul class="pagination justify-content-end">
+                        <li class="page-item @(currentPage == 1 ? "disabled" : "")">
+                            <button class="page-link" @onclick="@(() => ChangePage(currentPage - 1))">Zurück</button>
+                        </li>
+                        @for (int i = 1; i <= totalPages; i++)
+                        {
+                            var pageNum = i;
+                            <li class="page-item @(currentPage == pageNum ? "active" : "")">
+                                <button class="page-link" @onclick="@(() => ChangePage(pageNum))">@pageNum</button>
+                            </li>
+                        }
+                        <li class="page-item @(currentPage == totalPages ? "disabled" : "")">
+                            <button class="page-link" @onclick="@(() => ChangePage(currentPage + 1))">Weiter</button>
+                        </li>
+                    </ul>
+                </nav>
+            </div>
+        </div>
+    }
+</div>
+
+<ConfirmDialog
+    Show="@showConfirmDialog"
+    Title="@confirmTitle"
+    Message="@confirmMessage"
+    ConfirmText="@confirmButtonText"
+    ConfirmButtonCss="@confirmButtonCss"
+    OnConfirm="@confirmAction"
+    OnCancel="@(() => showConfirmDialog = false)" />
+
+@code {
+    private List<Event> events = new();
+    private int totalCount = 0;
+    private int currentPage = 1;
+    private int pageSize = 15;
+    private int totalPages => (int)Math.Ceiling((double)totalCount / pageSize);
+
+    private bool showPast = false;
+    private string currentSortColumn = "StartDateUtc";
+    private bool ascending = false;
+    private bool isLoading = true;
+    private string? errorMessage = null;
+
+    // ConfirmDialog state
+    private bool showConfirmDialog = false;
+    private string confirmTitle = "";
+    private string confirmMessage = "";
+    private string confirmButtonText = "Bestätigen";
+    private string confirmButtonCss = "btn-primary";
+    private EventCallback confirmAction;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadEvents();
+    }
+
+    private async Task LoadEvents()
+    {
+        isLoading = true;
+        errorMessage = null;
+
+        try
+        {
+            events = await EventService.GetEventsAsync(
+                includePast: showPast,
+                sortColumn: currentSortColumn,
+                ascending: ascending,
+                page: currentPage,
+                pageSize: pageSize
+            );
+
+            totalCount = await EventService.GetEventCountAsync(showPast);
+        }
+        catch (Exception ex)
+        {
+            errorMessage = $"Fehler beim Laden der Veranstaltungen: {ex.Message}";
+        }
+        finally
+        {
+            isLoading = false;
+        }
+    }
+
+    private async Task SortBy(string column)
+    {
+        if (currentSortColumn == column)
+        {
+            ascending = !ascending;
+        }
+        else
+        {
+            currentSortColumn = column;
+            ascending = true;
+        }
+
+        await LoadEvents();
+    }
+
+    private async Task ChangePage(int page)
+    {
+        if (page < 1 || page > totalPages)
+            return;
+
+        currentPage = page;
+        await LoadEvents();
+    }
+
+    private async Task TogglePast()
+    {
+        currentPage = 1;
+        await LoadEvents();
+    }
+
+    private void ShowPublishConfirm(int eventId)
+    {
+        confirmTitle = "Veranstaltung veröffentlichen";
+        confirmMessage = "Diese Veranstaltung wird für alle Makler sichtbar. Fortfahren?";
+        confirmButtonText = "Veröffentlichen";
+        confirmButtonCss = "btn-success";
+        confirmAction = EventCallback.Factory.Create(this, () => PublishEvent(eventId));
+        showConfirmDialog = true;
+    }
+
+    private void ShowUnpublishConfirm(int eventId)
+    {
+        confirmTitle = "Veranstaltung zurückziehen";
+        confirmMessage = "Diese Veranstaltung wird für Makler nicht mehr sichtbar. Fortfahren?";
+        confirmButtonText = "Zurückziehen";
+        confirmButtonCss = "btn-warning";
+        confirmAction = EventCallback.Factory.Create(this, () => UnpublishEvent(eventId));
+        showConfirmDialog = true;
+    }
+
+    private void ShowDeleteConfirm(int eventId)
+    {
+        confirmTitle = "Veranstaltung löschen";
+        confirmMessage = "Soll diese Veranstaltung wirklich gelöscht werden?";
+        confirmButtonText = "Löschen";
+        confirmButtonCss = "btn-danger";
+        confirmAction = EventCallback.Factory.Create(this, () => DeleteEvent(eventId));
+        showConfirmDialog = true;
+    }
+
+    private async Task PublishEvent(int eventId)
+    {
+        showConfirmDialog = false;
+
+        var success = await EventService.PublishEventAsync(eventId);
+
+        if (success)
+        {
+            await LoadEvents();
+        }
+        else
+        {
+            errorMessage = "Fehler beim Veröffentlichen der Veranstaltung.";
+        }
+    }
+
+    private async Task UnpublishEvent(int eventId)
+    {
+        showConfirmDialog = false;
+
+        var (success, error) = await EventService.UnpublishEventAsync(eventId);
+
+        if (success)
+        {
+            await LoadEvents();
+        }
+        else
+        {
+            errorMessage = error ?? "Fehler beim Zurückziehen der Veranstaltung.";
+        }
+    }
+
+    private async Task DeleteEvent(int eventId)
+    {
+        showConfirmDialog = false;
+
+        var success = await EventService.DeleteEventAsync(eventId);
+
+        if (success)
+        {
+            await LoadEvents();
+        }
+        else
+        {
+            errorMessage = "Veranstaltung kann nicht gelöscht werden, da bereits Anmeldungen existieren.";
+        }
+    }
+
+    private async Task DuplicateEvent(int eventId)
+    {
+        try
+        {
+            var duplicate = await EventService.DuplicateEventAsync(eventId);
+            NavigationManager.NavigateTo($"/admin/events/edit/{duplicate.Id}");
+        }
+        catch (Exception ex)
+        {
+            errorMessage = $"Fehler beim Duplizieren: {ex.Message}";
+        }
+    }
+}
