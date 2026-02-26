@@ -1,6 +1,8 @@
 using EventCenter.Web.Components;
 using EventCenter.Web.Domain;
 using EventCenter.Web.Infrastructure.Authentication;
+using EventCenter.Web.Infrastructure.Calendar;
+using EventCenter.Web.Infrastructure.Email;
 using EventCenter.Web.Services;
 using EventCenter.Web.Validators;
 using FluentValidation;
@@ -40,6 +42,14 @@ builder.Services.AddValidatorsFromAssemblyContaining<EventValidator>();
 
 // Register application services
 builder.Services.AddScoped<EventService>();
+builder.Services.AddScoped<RegistrationService>();
+
+// Email service
+builder.Services.Configure<SmtpSettings>(builder.Configuration.GetSection("Smtp"));
+builder.Services.AddScoped<IEmailSender, MailKitEmailSender>();
+
+// Calendar export service
+builder.Services.AddSingleton<ICalendarExportService, IcalNetCalendarService>();
 
 // Configure Authentication with Keycloak OIDC
 builder.Services.AddAuthentication(options =>
@@ -143,6 +153,53 @@ app.MapGet("/auth/signout", async (HttpContext context) =>
 
 app.MapRazorComponents<App>()
     .AddInteractiveServerRenderMode();
+
+// Minimal API endpoints for calendar and document downloads
+app.MapGet("/api/events/{eventId:int}/calendar", async (
+    int eventId,
+    EventService eventService,
+    ICalendarExportService calendarService) =>
+{
+    var evt = await eventService.GetEventByIdAsync(eventId);
+    if (evt == null || !evt.IsPublished)
+        return Results.NotFound();
+
+    var icsBytes = calendarService.GenerateEventCalendar(evt);
+    return Results.File(icsBytes, contentType: "text/calendar", fileDownloadName: $"event-{evt.Id}.ics");
+}).RequireAuthorization("MaklerOnly");
+
+app.MapGet("/api/events/{eventId:int}/documents/{*filePath}", async (
+    int eventId,
+    string filePath,
+    EventService eventService,
+    IWebHostEnvironment env) =>
+{
+    var evt = await eventService.GetEventByIdAsync(eventId);
+    if (evt == null || !evt.IsPublished)
+        return Results.NotFound();
+
+    // Path traversal protection
+    var sanitizedPath = Path.GetFileName(filePath);
+    var expectedPrefix = $"/uploads/events/{eventId}/";
+    var fullRelativePath = $"{expectedPrefix}{sanitizedPath}";
+
+    if (!evt.DocumentPaths.Contains(fullRelativePath))
+        return Results.NotFound();
+
+    var physicalPath = Path.Combine(env.WebRootPath, "uploads", "events", eventId.ToString(), sanitizedPath);
+    if (!File.Exists(physicalPath))
+        return Results.NotFound();
+
+    var contentType = Path.GetExtension(physicalPath).ToLowerInvariant() switch
+    {
+        ".pdf" => "application/pdf",
+        ".jpg" or ".jpeg" => "image/jpeg",
+        ".png" => "image/png",
+        _ => "application/octet-stream"
+    };
+
+    return Results.File(physicalPath, contentType: contentType, fileDownloadName: sanitizedPath);
+}).RequireAuthorization("MaklerOnly");
 
 // Apply migrations automatically in Development environment
 if (app.Environment.IsDevelopment())
