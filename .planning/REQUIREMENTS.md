@@ -7,8 +7,8 @@
 
 ### Authentifizierung
 
-- [ ] **AUTH-01**: Admin kann sich via Keycloak im Backoffice anmelden
-- [ ] **AUTH-02**: Makler kann sich via Keycloak im Portal anmelden
+- [x] **AUTH-01**: Admin kann sich via Keycloak im Backoffice anmelden
+- [x] **AUTH-02**: Makler kann sich via Keycloak im Portal anmelden
 - [ ] **AUTH-03**: Unternehmensvertreter kann per GUID-Link ohne Login auf Firmenbuchung zugreifen
 
 ### Veranstaltungsverwaltung (Admin)
@@ -126,8 +126,8 @@
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| AUTH-01 | Phase 1 | Pending |
-| AUTH-02 | Phase 1 | Pending |
+| AUTH-01 | Phase 1 | Complete |
+| AUTH-02 | Phase 1 | Complete |
 | AUTH-03 | Phase 5 | Pending |
 | EVNT-01 | Phase 2 | Pending |
 | EVNT-02 | Phase 2 | Pending |
