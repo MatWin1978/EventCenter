@@ -1,0 +1,18 @@
+@using EventCenter.Web.Domain.Enums
+
+@{
+    var (cssClass, label) = State switch
+    {
+        EventState.NotPublished => ("bg-secondary", "Entwurf"),
+        EventState.Public => ("bg-success", "Öffentlich"),
+        EventState.DeadlineReached => ("bg-warning text-dark", "Frist abgelaufen"),
+        EventState.Finished => ("bg-primary", "Beendet"),
+        _ => ("bg-secondary", "Unbekannt")
+    };
+}
+
+<span class="badge @cssClass">@label</span>
+
+@code {
+    [Parameter] public EventState State { get; set; }
+}
