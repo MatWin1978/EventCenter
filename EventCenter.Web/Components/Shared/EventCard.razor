@@ -1,0 +1,99 @@
+@using EventCenter.Web.Domain.Entities
+@using EventCenter.Web.Domain.Extensions
+@using EventCenter.Web.Infrastructure.Helpers
+@using EventCenter.Web.Domain.Enums
+
+<div class="card h-100">
+    <div class="card-body d-flex flex-column">
+        <h5 class="card-title">@Event.Title</h5>
+
+        <div class="text-muted small mb-2">
+            <span class="me-3">
+                <i class="bi bi-calendar"></i> @TimeZoneHelper.FormatDateTimeCet(Event.StartDateUtc, "dd.MM.yyyy")
+            </span>
+            <span>
+                <i class="bi bi-geo-alt"></i> @Event.Location
+            </span>
+        </div>
+
+        <p class="card-text flex-grow-1">
+            @GetDescriptionExcerpt()
+        </p>
+
+        <div class="mb-2">
+            @GetStatusBadge()
+            @if (GetMaklerCost() > 0)
+            {
+                <span class="badge bg-light text-dark ms-1">ab @GetMaklerCost().ToString("F2") EUR</span>
+            }
+        </div>
+    </div>
+    <div class="card-footer bg-transparent">
+        <a href="/portal/events/@Event.Id" class="btn btn-primary btn-sm w-100">Details</a>
+    </div>
+</div>
+
+@code {
+    [Parameter] public Event Event { get; set; } = null!;
+    [Parameter] public string UserEmail { get; set; } = string.Empty;
+    [Parameter] public bool IsRegistered { get; set; }
+
+    private string GetDescriptionExcerpt()
+    {
+        if (string.IsNullOrWhiteSpace(Event.Description))
+        {
+            return string.Empty;
+        }
+
+        if (Event.Description.Length <= 120)
+        {
+            return Event.Description;
+        }
+
+        return Event.Description.Substring(0, 120) + "...";
+    }
+
+    private RenderFragment GetStatusBadge()
+    {
+        var state = Event.GetCurrentState();
+        var registrationCount = Event.GetCurrentRegistrationCount();
+
+        // Broker-specific status logic (different from admin EventStatusBadge)
+        if (IsRegistered)
+        {
+            return @<span class="badge bg-primary">Angemeldet</span>;
+        }
+
+        if (state == EventState.Finished || state == EventState.DeadlineReached)
+        {
+            return @<span class="badge bg-secondary">Verpasst</span>;
+        }
+
+        if (registrationCount >= Event.MaxCapacity)
+        {
+            return @<span class="badge bg-danger">Ausgebucht</span>;
+        }
+
+        return @<span class="badge bg-success">Plätze frei</span>;
+    }
+
+    private decimal GetMaklerCost()
+    {
+        if (Event.AgendaItems == null || !Event.AgendaItems.Any())
+        {
+            return 0;
+        }
+
+        // Get minimum cost from agenda items that maklers can participate in
+        var maklerItems = Event.AgendaItems
+            .Where(a => a.MaklerCanParticipate && a.CostForMakler > 0)
+            .ToList();
+
+        if (!maklerItems.Any())
+        {
+            return 0;
+        }
+
+        return maklerItems.Min(a => a.CostForMakler);
+    }
+}
