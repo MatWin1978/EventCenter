@@ -60,12 +60,12 @@
 
 - [ ] **MDET-01**: Makler sieht Veranstaltungsdetails (Titel, Beschreibung, Ort, Zeit, Kontakt) (US-14)
 - [ ] **MDET-02**: Makler kann Dokumente herunterladen (US-14)
-- [ ] **MDET-03**: Makler kann Termin als iCalendar exportieren (US-16)
+- [x] **MDET-03**: Makler kann Termin als iCalendar exportieren (US-16)
 
 ### Selbstanmeldung (Makler)
 
 - [ ] **MREG-01**: Makler kann sich für Veranstaltung anmelden mit Agendapunkt-Auswahl (US-15)
-- [ ] **MREG-02**: System prüft Deadline, Kapazität und Berechtigung vor Anmeldung
+- [x] **MREG-02**: System prüft Deadline, Kapazität und Berechtigung vor Anmeldung
 - [ ] **MREG-03**: Makler sieht Teilnahmekosten pro Agendapunkt
 - [ ] **MREG-04**: Makler erhält Bestätigungsseite nach erfolgreicher Anmeldung
 
@@ -95,7 +95,7 @@
 
 ### E-Mail-Benachrichtigungen
 
-- [ ] **MAIL-01**: System sendet Bestätigung an Makler nach Selbstanmeldung
+- [x] **MAIL-01**: System sendet Bestätigung an Makler nach Selbstanmeldung
 - [ ] **MAIL-02**: System sendet Bestätigung an Makler nach Gastanmeldung
 - [ ] **MAIL-03**: System sendet Einladung an Firma mit GUID-Link
 - [ ] **MAIL-04**: System sendet Benachrichtigung an Admin nach Firmenbuchung
@@ -155,9 +155,9 @@
 | MLST-03 | Phase 3 | Pending |
 | MDET-01 | Phase 3 | Pending |
 | MDET-02 | Phase 3 | Pending |
-| MDET-03 | Phase 3 | Pending |
+| MDET-03 | Phase 3 | Complete (03-01) |
 | MREG-01 | Phase 3 | Pending |
-| MREG-02 | Phase 3 | Pending |
+| MREG-02 | Phase 3 | Complete (03-01) |
 | MREG-03 | Phase 3 | Pending |
 | MREG-04 | Phase 3 | Pending |
 | GREG-01 | Phase 6 | Pending |
@@ -175,7 +175,7 @@
 | CBOK-06 | Phase 5 | Pending |
 | CBOK-07 | Phase 5 | Pending |
 | CBOK-08 | Phase 5 | Pending |
-| MAIL-01 | Phase 3 | Pending |
+| MAIL-01 | Phase 3 | Complete (03-01) |
 | MAIL-02 | Phase 6 | Pending |
 | MAIL-03 | Phase 4 | Pending |
 | MAIL-04 | Phase 5 | Pending |
