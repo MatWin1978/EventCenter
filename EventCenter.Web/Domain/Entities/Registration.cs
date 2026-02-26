@@ -17,9 +17,12 @@ public class Registration
     public bool IsConfirmed { get; set; }
     public int NumberOfCompanions { get; set; }
     public string? SpecialRequirements { get; set; }
+    public bool IsCancelled { get; set; }
+    public DateTime? CancellationDateUtc { get; set; }
 
     // Navigation properties
     public Event Event { get; set; } = null!;
     public EventCompany? EventCompany { get; set; }
     public ICollection<EventOption> SelectedOptions { get; set; } = new List<EventOption>();
+    public ICollection<RegistrationAgendaItem> RegistrationAgendaItems { get; set; } = new List<RegistrationAgendaItem>();
 }

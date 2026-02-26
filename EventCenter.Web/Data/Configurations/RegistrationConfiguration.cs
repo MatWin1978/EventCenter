@@ -47,6 +47,13 @@ public class RegistrationConfiguration : IEntityTypeConfiguration<Registration>
         builder.Property(r => r.SpecialRequirements)
             .HasMaxLength(1000);
 
+        builder.Property(r => r.IsCancelled)
+            .IsRequired()
+            .HasDefaultValue(false);
+
+        builder.Property(r => r.CancellationDateUtc)
+            .IsRequired(false);
+
         // Index on EventId for faster lookup
         builder.HasIndex(r => r.EventId);
 

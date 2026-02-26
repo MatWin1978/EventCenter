@@ -56,6 +56,9 @@ public class EventConfiguration : IEntityTypeConfiguration<Event>
                 v => JsonSerializer.Serialize(v, (JsonSerializerOptions?)null),
                 v => JsonSerializer.Deserialize<List<string>>(v, (JsonSerializerOptions?)null) ?? new List<string>());
 
+        builder.Property(e => e.RowVersion)
+            .IsRowVersion();
+
         // Index on IsPublished for filtering published events
         builder.HasIndex(e => e.IsPublished);
 

@@ -19,6 +19,9 @@ public class Event
     public string? ContactPhone { get; set; }
     public List<string> DocumentPaths { get; set; } = new();
 
+    [System.ComponentModel.DataAnnotations.Timestamp]
+    public byte[]? RowVersion { get; set; }
+
     // Navigation properties
     public ICollection<EventAgendaItem> AgendaItems { get; set; } = new List<EventAgendaItem>();
     public ICollection<EventCompany> Companies { get; set; } = new List<EventCompany>();

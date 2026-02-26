@@ -15,6 +15,7 @@ public class EventCenterDbContext : DbContext
     public DbSet<EventCompany> EventCompanies => Set<EventCompany>();
     public DbSet<Registration> Registrations => Set<Registration>();
     public DbSet<EventOption> EventOptions => Set<EventOption>();
+    public DbSet<RegistrationAgendaItem> RegistrationAgendaItems => Set<RegistrationAgendaItem>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
