@@ -1,0 +1,322 @@
+@page "/portal/events/{EventId:int}"
+@using EventCenter.Web.Services
+@using EventCenter.Web.Domain.Entities
+@using EventCenter.Web.Domain.Enums
+@using EventCenter.Web.Domain.Extensions
+@using EventCenter.Web.Infrastructure.Helpers
+@using Microsoft.AspNetCore.Components.Authorization
+@attribute [Authorize(Roles = "Makler")]
+@inject EventService EventService
+@inject NavigationManager NavigationManager
+@inject AuthenticationStateProvider AuthStateProvider
+
+<PageTitle>@(evt?.Title ?? "Veranstaltung") - Veranstaltungscenter</PageTitle>
+
+@if (isLoading)
+{
+    <div class="text-center py-5">
+        <div class="spinner-border text-primary" role="status">
+            <span class="visually-hidden">Lädt...</span>
+        </div>
+        <p class="mt-2 text-muted">Veranstaltung wird geladen...</p>
+    </div>
+}
+else if (evt == null)
+{
+    <div class="alert alert-danger">
+        <h4 class="alert-heading">Veranstaltung nicht gefunden</h4>
+        <p>Die angeforderte Veranstaltung konnte nicht gefunden werden.</p>
+        <a href="/portal/events" class="btn btn-primary">Zurück zur Übersicht</a>
+    </div>
+}
+else
+{
+    <div class="container-fluid py-4">
+        <div class="row">
+            <!-- Main Content (Left) -->
+            <div class="col-md-8">
+                <!-- Title Section -->
+                <div class="mb-4">
+                    <h2>@evt.Title</h2>
+                    @{
+                        var state = evt.GetCurrentState();
+                        var badgeClass = state switch
+                        {
+                            EventState.Public => isUserRegistered ? "bg-info" : "bg-success",
+                            EventState.Finished => "bg-secondary",
+                            EventState.DeadlineReached => "bg-secondary",
+                            _ => "bg-secondary"
+                        };
+                        var badgeText = state switch
+                        {
+                            EventState.Public => isUserRegistered ? "Angemeldet" : "Plätze frei",
+                            EventState.Finished => "Beendet",
+                            EventState.DeadlineReached => "Anmeldefrist abgelaufen",
+                            _ => "Nicht verfügbar"
+                        };
+                    }
+                    <span class="badge @badgeClass">@badgeText</span>
+                    @if (state == EventState.Public && !isUserRegistered && evt.GetCurrentRegistrationCount() >= evt.MaxCapacity)
+                    {
+                        <span class="badge bg-danger ms-2">Ausgebucht</span>
+                    }
+                </div>
+
+                <!-- Description Section -->
+                <div class="mb-4">
+                    <h4>Beschreibung</h4>
+                    <div class="card">
+                        <div class="card-body">
+                            @if (!string.IsNullOrWhiteSpace(evt.Description))
+                            {
+                                @((MarkupString)evt.Description)
+                            }
+                            else
+                            {
+                                <p class="text-muted">Keine Beschreibung verfügbar.</p>
+                            }
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Agenda Items Section -->
+                @{
+                    var maklerAgendaItems = evt.AgendaItems
+                        .Where(ai => ai.MaklerCanParticipate)
+                        .OrderBy(ai => ai.StartDateTimeUtc)
+                        .ToList();
+                }
+                @if (maklerAgendaItems.Any())
+                {
+                    <div class="mb-4">
+                        <h4>Programm</h4>
+                        <div class="list-group">
+                            @foreach (var item in maklerAgendaItems)
+                            {
+                                <div class="list-group-item">
+                                    <div class="d-flex w-100 justify-content-between align-items-start">
+                                        <div>
+                                            <h5 class="mb-1">
+                                                @item.Title
+                                                @if (item.IsMandatory)
+                                                {
+                                                    <span class="badge bg-warning text-dark ms-2">Pflicht</span>
+                                                }
+                                            </h5>
+                                            <p class="mb-1 text-muted">
+                                                <i class="bi bi-clock"></i>
+                                                @TimeZoneHelper.FormatDateTimeCet(DateTime.SpecifyKind(item.StartDateTimeUtc, DateTimeKind.Utc), "dd.MM.yyyy HH:mm")
+                                                - @TimeZoneHelper.FormatDateTimeCet(DateTime.SpecifyKind(item.EndDateTimeUtc, DateTimeKind.Utc), "HH:mm")
+                                            </p>
+                                            @if (!string.IsNullOrWhiteSpace(item.Description))
+                                            {
+                                                <p class="mb-1 text-muted small">@item.Description</p>
+                                            }
+                                        </div>
+                                        <div class="text-end">
+                                            @if (item.CostForMakler > 0)
+                                            {
+                                                <span class="badge bg-primary">@item.CostForMakler.ToString("N2") EUR</span>
+                                            }
+                                            else
+                                            {
+                                                <span class="badge bg-success">Kostenfrei</span>
+                                            }
+                                        </div>
+                                    </div>
+                                </div>
+                            }
+                        </div>
+                    </div>
+                }
+
+                <!-- Documents Section -->
+                <div class="mb-4">
+                    <h4>Dokumente</h4>
+                    @if (evt.DocumentPaths != null && evt.DocumentPaths.Any())
+                    {
+                        <div class="row">
+                            @foreach (var docPath in evt.DocumentPaths)
+                            {
+                                var fileName = Path.GetFileName(docPath);
+                                var extension = Path.GetExtension(docPath).ToLower();
+                                var extensionBadge = extension switch
+                                {
+                                    ".pdf" => "bg-danger",
+                                    ".jpg" or ".jpeg" or ".png" => "bg-info",
+                                    ".doc" or ".docx" => "bg-primary",
+                                    _ => "bg-secondary"
+                                };
+
+                                <div class="col-md-6 mb-3">
+                                    <div class="card">
+                                        <div class="card-body d-flex justify-content-between align-items-center">
+                                            <div>
+                                                <div class="mb-1">
+                                                    <span class="badge @extensionBadge">@extension.TrimStart('.')</span>
+                                                </div>
+                                                <p class="mb-0 small text-truncate" style="max-width: 200px;" title="@fileName">@fileName</p>
+                                            </div>
+                                            <a href="/api/events/@EventId/documents/@Path.GetFileName(docPath)"
+                                               class="btn btn-outline-primary btn-sm">
+                                                <i class="bi bi-download"></i> Herunterladen
+                                            </a>
+                                        </div>
+                                    </div>
+                                </div>
+                            }
+                        </div>
+                    }
+                    else
+                    {
+                        <p class="text-muted">Keine Dokumente vorhanden.</p>
+                    }
+                </div>
+            </div>
+
+            <!-- Sidebar (Right) -->
+            <div class="col-md-4">
+                <div style="position: sticky; top: 1rem;">
+                    <!-- Key Info Card -->
+                    <div class="card mb-3">
+                        <div class="card-header bg-primary text-white">
+                            <h5 class="mb-0">Veranstaltungsdetails</h5>
+                        </div>
+                        <div class="card-body">
+                            <div class="mb-3">
+                                <strong><i class="bi bi-calendar-event"></i> Datum:</strong><br/>
+                                <span>@TimeZoneHelper.FormatDateTimeCet(DateTime.SpecifyKind(evt.StartDateUtc, DateTimeKind.Utc), "dd.MM.yyyy HH:mm")</span>
+                                <br/>bis<br/>
+                                <span>@TimeZoneHelper.FormatDateTimeCet(DateTime.SpecifyKind(evt.EndDateUtc, DateTimeKind.Utc), "dd.MM.yyyy HH:mm")</span>
+                            </div>
+
+                            <div class="mb-3">
+                                <strong><i class="bi bi-geo-alt"></i> Ort:</strong><br/>
+                                <span>@evt.Location</span>
+                            </div>
+
+                            <div class="mb-3">
+                                <strong><i class="bi bi-alarm"></i> Anmeldefrist:</strong><br/>
+                                <span>@TimeZoneHelper.FormatDateTimeCet(DateTime.SpecifyKind(evt.RegistrationDeadlineUtc, DateTimeKind.Utc), "dd.MM.yyyy")</span>
+                            </div>
+
+                            @if (!string.IsNullOrWhiteSpace(evt.ContactName) || !string.IsNullOrWhiteSpace(evt.ContactEmail) || !string.IsNullOrWhiteSpace(evt.ContactPhone))
+                            {
+                                <div class="mb-3">
+                                    <strong><i class="bi bi-person-circle"></i> Kontakt:</strong><br/>
+                                    @if (!string.IsNullOrWhiteSpace(evt.ContactName))
+                                    {
+                                        <span>@evt.ContactName</span><br/>
+                                    }
+                                    @if (!string.IsNullOrWhiteSpace(evt.ContactEmail))
+                                    {
+                                        <a href="mailto:@evt.ContactEmail">@evt.ContactEmail</a><br/>
+                                    }
+                                    @if (!string.IsNullOrWhiteSpace(evt.ContactPhone))
+                                    {
+                                        <span>@evt.ContactPhone</span>
+                                    }
+                                </div>
+                            }
+
+                            <div class="mb-0">
+                                <strong><i class="bi bi-people"></i> Verfügbare Plätze:</strong><br/>
+                                <span>@(evt.MaxCapacity - evt.GetCurrentRegistrationCount()) / @evt.MaxCapacity</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Action Buttons -->
+                    @{
+                        var currentState = evt.GetCurrentState();
+                        var isFull = evt.GetCurrentRegistrationCount() >= evt.MaxCapacity;
+                    }
+
+                    @if (isUserRegistered)
+                    {
+                        <div class="alert alert-success">
+                            <i class="bi bi-check-circle"></i> Sie sind bereits angemeldet.
+                        </div>
+                    }
+                    else if (currentState == EventState.Public && !isFull)
+                    {
+                        <a href="/portal/events/@EventId/register" class="btn btn-primary btn-lg w-100 mb-2">
+                            <i class="bi bi-pencil-square"></i> Jetzt anmelden
+                        </a>
+                    }
+                    else if (isFull)
+                    {
+                        <div class="alert alert-warning">
+                            <i class="bi bi-exclamation-triangle"></i> Veranstaltung ist ausgebucht.
+                        </div>
+                    }
+                    else if (currentState == EventState.DeadlineReached)
+                    {
+                        <div class="alert alert-secondary">
+                            <i class="bi bi-clock-history"></i> Anmeldefrist abgelaufen.
+                        </div>
+                    }
+                    else if (currentState == EventState.Finished)
+                    {
+                        <div class="alert alert-secondary">
+                            <i class="bi bi-calendar-x"></i> Veranstaltung ist beendet.
+                        </div>
+                    }
+
+                    <a href="/api/events/@EventId/calendar" class="btn btn-outline-secondary w-100 mb-3">
+                        <i class="bi bi-calendar-plus"></i> Termin exportieren (iCal)
+                    </a>
+
+                    <a href="/portal/events" class="btn btn-link w-100">
+                        <i class="bi bi-arrow-left"></i> Zurück zur Übersicht
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+}
+
+@code {
+    [Parameter]
+    public int EventId { get; set; }
+
+    private Event? evt;
+    private bool isLoading = true;
+    private bool isUserRegistered = false;
+    private string userEmail = string.Empty;
+
+    protected override async Task OnInitializedAsync()
+    {
+        try
+        {
+            // Get user email from authentication state
+            var authState = await AuthStateProvider.GetAuthenticationStateAsync();
+            var user = authState.User;
+            userEmail = user.FindFirst("preferred_username")?.Value
+                ?? user.FindFirst("email")?.Value
+                ?? string.Empty;
+
+            // Load event
+            evt = await EventService.GetEventByIdAsync(EventId);
+
+            // Redirect if event not found or not published
+            if (evt == null || !evt.IsPublished)
+            {
+                NavigationManager.NavigateTo("/portal/events");
+                return;
+            }
+
+            // Check if user is already registered
+            if (!string.IsNullOrWhiteSpace(userEmail))
+            {
+                isUserRegistered = evt.Registrations?.Any(r =>
+                    r.Email.Equals(userEmail, StringComparison.OrdinalIgnoreCase) &&
+                    !r.IsCancelled) ?? false;
+            }
+        }
+        finally
+        {
+            isLoading = false;
+        }
+    }
+}
