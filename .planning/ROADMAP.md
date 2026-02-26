@@ -51,10 +51,13 @@ Plans:
   3. Admin can add agenda items with separate pricing for brokers and guests
   4. Admin can configure extra options (add-ons) and prevent deletion of already-booked options
   5. System automatically calculates and displays event state (Public, DeadlineReached, Finished)
-**Plans**: TBD
+**Plans**: 4 plans
 
 Plans:
-- [ ] TBD after phase planning
+- [ ] 02-01-PLAN.md — Domain model extensions, EventState calculation, and validators (TDD)
+- [ ] 02-02-PLAN.md — Event service layer with CRUD, publish/unpublish, duplicate, and file operations (TDD)
+- [ ] 02-03-PLAN.md — Admin event list page with data table, status badges, and shared components
+- [ ] 02-04-PLAN.md — Admin event form (create/edit) with inline agenda items and extra options
 
 ### Phase 3: Makler Event Discovery & Registration
 **Goal**: Brokers can discover events, view details, and self-register with agenda item selection
