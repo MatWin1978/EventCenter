@@ -14,9 +14,14 @@ public class Event
     public int MaxCapacity { get; set; }
     public int MaxCompanions { get; set; }
     public bool IsPublished { get; set; }
+    public string? ContactName { get; set; }
+    public string? ContactEmail { get; set; }
+    public string? ContactPhone { get; set; }
+    public List<string> DocumentPaths { get; set; } = new();
 
     // Navigation properties
     public ICollection<EventAgendaItem> AgendaItems { get; set; } = new List<EventAgendaItem>();
     public ICollection<EventCompany> Companies { get; set; } = new List<EventCompany>();
     public ICollection<Registration> Registrations { get; set; } = new List<Registration>();
+    public ICollection<EventOption> EventOptions { get; set; } = new List<EventOption>();
 }

@@ -41,6 +41,14 @@ public class EventAgendaItemConfiguration : IEntityTypeConfiguration<EventAgenda
         builder.Property(a => a.MaxParticipants)
             .IsRequired(false);
 
+        builder.Property(a => a.MaklerCanParticipate)
+            .IsRequired()
+            .HasDefaultValue(true);
+
+        builder.Property(a => a.GuestsCanParticipate)
+            .IsRequired()
+            .HasDefaultValue(true);
+
         // Index on EventId for faster lookup
         builder.HasIndex(a => a.EventId);
 

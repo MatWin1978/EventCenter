@@ -1,6 +1,7 @@
 using EventCenter.Web.Domain.Entities;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
+using System.Text.Json;
 
 namespace EventCenter.Web.Data.Configurations;
 
@@ -44,6 +45,21 @@ public class EventConfiguration : IEntityTypeConfiguration<Event>
         builder.Property(e => e.IsPublished)
             .IsRequired();
 
+        builder.Property(e => e.ContactName)
+            .HasMaxLength(200);
+
+        builder.Property(e => e.ContactEmail)
+            .HasMaxLength(200);
+
+        builder.Property(e => e.ContactPhone)
+            .HasMaxLength(50);
+
+        builder.Property(e => e.DocumentPaths)
+            .HasConversion(
+                v => JsonSerializer.Serialize(v, (JsonSerializerOptions?)null),
+                v => JsonSerializer.Deserialize<List<string>>(v, (JsonSerializerOptions?)null) ?? new List<string>())
+            .HasColumnType("nvarchar(max)");
+
         // Index on IsPublished for filtering published events
         builder.HasIndex(e => e.IsPublished);
 
@@ -67,5 +83,7 @@ public class EventConfiguration : IEntityTypeConfiguration<Event>
             .WithOne(r => r.Event)
             .HasForeignKey(r => r.EventId)
             .OnDelete(DeleteBehavior.Cascade);
+
+        // EventOptions relationship is configured from EventOption side
     }
 }

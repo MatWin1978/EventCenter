@@ -31,7 +31,7 @@ public class EventOptionConfiguration : IEntityTypeConfiguration<EventOption>
 
         // Relationship with Event (EventOption belongs to Event)
         builder.HasOne(o => o.Event)
-            .WithMany()
+            .WithMany(e => e.EventOptions)
             .HasForeignKey(o => o.EventId)
             .OnDelete(DeleteBehavior.Cascade);
 

@@ -12,6 +12,8 @@ public class EventAgendaItem
     public decimal CostForGuest { get; set; }
     public bool IsMandatory { get; set; }
     public int? MaxParticipants { get; set; }
+    public bool MaklerCanParticipate { get; set; } = true;
+    public bool GuestsCanParticipate { get; set; } = true;
 
     // Navigation properties
     public Event Event { get; set; } = null!;
