@@ -1,0 +1,190 @@
+@page "/portal/events"
+@attribute [Authorize(Roles = "Makler")]
+@layout MainLayout
+@implements IDisposable
+@using EventCenter.Web.Services
+@using EventCenter.Web.Domain.Entities
+@using EventCenter.Web.Domain.Extensions
+@using EventCenter.Web.Domain.Enums
+@using EventCenter.Web.Components.Shared
+@using Microsoft.AspNetCore.Components.Authorization
+@inject EventService EventService
+@inject AuthenticationStateProvider AuthStateProvider
+
+<PageTitle>Veranstaltungen - Veranstaltungscenter</PageTitle>
+
+<h2>Veranstaltungen</h2>
+
+<!-- Filter Bar -->
+<div class="row mb-3">
+    <div class="col-md-6">
+        <input type="text"
+               class="form-control"
+               placeholder="Suche nach Name oder Ort..."
+               @bind="searchTerm"
+               @bind:event="oninput"
+               @bind:after="OnSearchChanged" />
+    </div>
+    <div class="col-md-6">
+        <div class="btn-group" role="group">
+            <button type="button"
+                    class="btn btn-outline-primary @(dateFilter == "month" ? "active" : "")"
+                    @onclick="@(() => SetDateFilter("month"))">
+                Diesen Monat
+            </button>
+            <button type="button"
+                    class="btn btn-outline-primary @(dateFilter == "quarter" ? "active" : "")"
+                    @onclick="@(() => SetDateFilter("quarter"))">
+                Nächste 3 Monate
+            </button>
+            <button type="button"
+                    class="btn btn-outline-primary @(dateFilter == "year" ? "active" : "")"
+                    @onclick="@(() => SetDateFilter("year"))">
+                Dieses Jahr
+            </button>
+        </div>
+    </div>
+</div>
+
+@if (isLoading)
+{
+    <div class="text-center my-5">
+        <div class="spinner-border text-primary" role="status">
+            <span class="visually-hidden">Lade Veranstaltungen...</span>
+        </div>
+        <p class="mt-2">Lade Veranstaltungen...</p>
+    </div>
+}
+else if (!allEvents.Any())
+{
+    <div class="alert alert-info">Keine Veranstaltungen gefunden.</div>
+}
+else
+{
+    <!-- Active Events Section -->
+    var activeEvents = GetActiveEvents();
+    var pastOrFullEvents = GetPastOrFullEvents();
+
+    @if (activeEvents.Any())
+    {
+        <div class="row row-cols-1 row-cols-md-2 row-cols-lg-3 g-4 mb-4">
+            @foreach (var evt in activeEvents)
+            {
+                <div class="col">
+                    <EventCard Event="@evt"
+                              UserEmail="@userEmail"
+                              IsRegistered="@IsUserRegistered(evt)" />
+                </div>
+            }
+        </div>
+    }
+
+    <!-- Past/Full Events Collapsible Section -->
+    @if (pastOrFullEvents.Any())
+    {
+        <div class="mt-4">
+            <button class="btn btn-outline-secondary mb-3"
+                    type="button"
+                    data-bs-toggle="collapse"
+                    data-bs-target="#pastEvents"
+                    aria-expanded="false"
+                    aria-controls="pastEvents">
+                Vergangene und ausgebuchte Veranstaltungen anzeigen (@pastOrFullEvents.Count)
+            </button>
+
+            <div class="collapse" id="pastEvents">
+                <div class="row row-cols-1 row-cols-md-2 row-cols-lg-3 g-4">
+                    @foreach (var evt in pastOrFullEvents)
+                    {
+                        <div class="col">
+                            <EventCard Event="@evt"
+                                      UserEmail="@userEmail"
+                                      IsRegistered="@IsUserRegistered(evt)" />
+                        </div>
+                    }
+                </div>
+            </div>
+        </div>
+    }
+}
+
+@code {
+    private List<Event> allEvents = new();
+    private string searchTerm = "";
+    private string dateFilter = "quarter"; // default: Nächste 3 Monate
+    private bool isLoading = true;
+    private string userEmail = "";
+    private System.Threading.Timer? debounceTimer;
+
+    protected override async Task OnInitializedAsync()
+    {
+        var authState = await AuthStateProvider.GetAuthenticationStateAsync();
+        userEmail = authState.User.FindFirst("preferred_username")?.Value
+                    ?? authState.User.Identity?.Name ?? "";
+        await LoadEventsAsync();
+        isLoading = false;
+    }
+
+    private void OnSearchChanged()
+    {
+        debounceTimer?.Dispose();
+        debounceTimer = new System.Threading.Timer(_ =>
+        {
+            InvokeAsync(async () =>
+            {
+                await LoadEventsAsync();
+                StateHasChanged();
+            });
+        }, null, 300, Timeout.Infinite);
+    }
+
+    private async Task SetDateFilter(string filter)
+    {
+        dateFilter = filter;
+        await LoadEventsAsync();
+    }
+
+    private async Task LoadEventsAsync()
+    {
+        var now = DateTime.UtcNow;
+        DateTime? startDateTo = dateFilter switch
+        {
+            "month" => now.AddMonths(1),
+            "quarter" => now.AddMonths(3),
+            "year" => now.AddYears(1),
+            _ => now.AddMonths(3)
+        };
+
+        allEvents = await EventService.GetPublicEventsAsync(
+            searchTerm: string.IsNullOrWhiteSpace(searchTerm) ? null : searchTerm,
+            startDateFrom: null, // include all from past (for the collapsed section)
+            startDateTo: startDateTo,
+            userEmail: userEmail);
+    }
+
+    private bool IsUserRegistered(Event evt)
+        => evt.Registrations.Any(r => r.Email == userEmail && !r.IsCancelled);
+
+    private bool IsEventActive(Event evt)
+    {
+        var state = evt.GetCurrentState();
+        var isRegistered = IsUserRegistered(evt);
+        var isFull = evt.GetCurrentRegistrationCount() >= evt.MaxCapacity;
+
+        // Active: upcoming public events, or user's registered upcoming events
+        if (state == EventState.Public && !isFull) return true;
+        if (isRegistered && state != EventState.Finished) return true;
+        return false;
+    }
+
+    private List<Event> GetActiveEvents()
+        => allEvents.Where(IsEventActive).OrderBy(e => e.StartDateUtc).ToList();
+
+    private List<Event> GetPastOrFullEvents()
+        => allEvents.Where(e => !IsEventActive(e)).OrderByDescending(e => e.StartDateUtc).ToList();
+
+    public void Dispose()
+    {
+        debounceTimer?.Dispose();
+    }
+}
