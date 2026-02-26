@@ -70,10 +70,14 @@ Plans:
   4. Makler can self-register for an event, select agenda items, see costs, and receive validation before submission
   5. Makler receives confirmation email after successful registration
   6. Makler can export event to iCalendar format for calendar integration
-**Plans**: TBD
+**Plans**: 5 plans
 
 Plans:
-- [ ] TBD after phase planning
+- [ ] 03-01-PLAN.md — Domain model extensions, NuGet packages (MailKit, Ical.NET), service interfaces, and registration validator
+- [ ] 03-02-PLAN.md — RegistrationService with concurrency + EventService broker queries (TDD)
+- [ ] 03-03-PLAN.md — MailKit email sender, Ical.NET calendar export, and download API endpoints
+- [ ] 03-04-PLAN.md — Broker event list page with card grid, search, date filtering, and status badges
+- [ ] 03-05-PLAN.md — Event detail page, registration flow with confirmation modal, and confirmation page
 
 ### Phase 4: Company Invitations
 **Goal**: Admins can invite companies to events with custom pricing and send invitation emails
@@ -163,7 +167,7 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6 → 7 → 8
 |-------|----------------|--------|-----------|
 | 1. Foundation & Authentication | 4/4 | Complete   | 2026-02-26 |
 | 2. Admin Event Management | 4/4 | Complete   | 2026-02-26 |
-| 3. Makler Event Discovery & Registration | 0/TBD | Not started | - |
+| 3. Makler Event Discovery & Registration | 0/5 | Not started | - |
 | 4. Company Invitations | 0/TBD | Not started | - |
 | 5. Company Booking Portal | 0/TBD | Not started | - |
 | 6. Guest Management | 0/TBD | Not started | - |
