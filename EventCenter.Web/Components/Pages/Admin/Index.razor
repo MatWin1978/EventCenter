@@ -1,0 +1,46 @@
+@page "/admin"
+@attribute [Authorize(Roles = "Admin")]
+@layout MainLayout
+
+<PageTitle>Admin - Veranstaltungscenter</PageTitle>
+
+<h1>Admin Bereich</h1>
+
+<AuthorizeView Roles="Admin">
+    <Authorized>
+        <p>Willkommen im Admin-Bereich, @context.User.Identity?.Name!</p>
+
+        <div class="row mt-4">
+            <div class="col-md-4">
+                <div class="card">
+                    <div class="card-body">
+                        <h5 class="card-title">Veranstaltungen</h5>
+                        <p class="card-text">Veranstaltungen erstellen und verwalten</p>
+                        <a href="/admin/events" class="btn btn-primary">Zur Verwaltung</a>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="card">
+                    <div class="card-body">
+                        <h5 class="card-title">Firmeneinladungen</h5>
+                        <p class="card-text">Firmen zu Veranstaltungen einladen</p>
+                        <a href="/admin/companies" class="btn btn-primary">Zur Verwaltung</a>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="card">
+                    <div class="card-body">
+                        <h5 class="card-title">Teilnehmer</h5>
+                        <p class="card-text">Teilnehmerlisten und Exporte</p>
+                        <a href="/admin/participants" class="btn btn-primary">Zur Verwaltung</a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </Authorized>
+    <NotAuthorized>
+        <p>Zugriff verweigert. Sie benötigen Admin-Rechte.</p>
+    </NotAuthorized>
+</AuthorizeView>
