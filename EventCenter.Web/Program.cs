@@ -2,6 +2,7 @@ using EventCenter.Web.Components;
 using EventCenter.Web.Domain;
 using EventCenter.Web.Infrastructure.Authentication;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.Authentication.OpenIdConnect;
 using Microsoft.AspNetCore.Components.Authorization;
@@ -117,6 +118,19 @@ app.UseAntiforgery();
 
 app.UseAuthentication();
 app.UseAuthorization();
+
+// Authentication endpoints
+app.MapGet("/auth/challenge", async (HttpContext context, string returnUrl = "/") =>
+{
+    await context.ChallengeAsync(OpenIdConnectDefaults.AuthenticationScheme,
+        new AuthenticationProperties { RedirectUri = returnUrl });
+});
+
+app.MapGet("/auth/signout", async (HttpContext context) =>
+{
+    await context.SignOutAsync(CookieAuthenticationDefaults.AuthenticationScheme);
+    await context.SignOutAsync(OpenIdConnectDefaults.AuthenticationScheme);
+});
 
 app.MapRazorComponents<App>()
     .AddInteractiveServerRenderMode();
