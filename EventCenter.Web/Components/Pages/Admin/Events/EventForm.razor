@@ -161,6 +161,165 @@
                     </div>
                 </div>
 
+                <!-- Section 5: Agendapunkte (Agenda Items) -->
+                <div class="card mb-4">
+                    <div class="card-header d-flex justify-content-between align-items-center">
+                        <h4 class="mb-0">Agendapunkte</h4>
+                        <button type="button" class="btn btn-sm btn-outline-primary" @onclick="AddAgendaItem">
+                            <i class="bi bi-plus-circle"></i> Hinzufügen
+                        </button>
+                    </div>
+                    <div class="card-body">
+                        @if (!Model.AgendaItems.Any())
+                        {
+                            <p class="text-muted">Keine Agendapunkte vorhanden.</p>
+                        }
+                        else
+                        {
+                            var sortedItems = Model.AgendaItems.OrderBy(a => a.StartDateTimeUtc).ToList();
+                            @for (int i = 0; i < sortedItems.Count; i++)
+                            {
+                                var item = sortedItems[i];
+                                var index = i;
+                                <div class="card mb-3">
+                                    <div class="card-header d-flex justify-content-between align-items-center">
+                                        <strong>Agendapunkt @(index + 1)</strong>
+                                        <button type="button" class="btn btn-sm btn-danger" @onclick="@(() => RemoveAgendaItem(item))">
+                                            Entfernen
+                                        </button>
+                                    </div>
+                                    <div class="card-body">
+                                        <div class="mb-3">
+                                            <label class="form-label">Titel *</label>
+                                            <InputText class="form-control" @bind-Value="item.Title" />
+                                        </div>
+
+                                        <div class="mb-3">
+                                            <label class="form-label">Beschreibung</label>
+                                            <InputTextArea class="form-control" rows="2" @bind-Value="item.Description" />
+                                        </div>
+
+                                        <div class="row">
+                                            <div class="col-md-6 mb-3">
+                                                <label class="form-label">Startzeit (CET) *</label>
+                                                <input type="datetime-local" class="form-control"
+                                                       @bind="agendaItemDatesCet[item].StartCet" />
+                                            </div>
+
+                                            <div class="col-md-6 mb-3">
+                                                <label class="form-label">Endzeit (CET) *</label>
+                                                <input type="datetime-local" class="form-control"
+                                                       @bind="agendaItemDatesCet[item].EndCet" />
+                                            </div>
+                                        </div>
+
+                                        <div class="row">
+                                            <div class="col-md-6 mb-3">
+                                                <label class="form-label">Kosten Makler (€)</label>
+                                                <InputNumber class="form-control" step="0.01" @bind-Value="item.CostForMakler" />
+                                            </div>
+
+                                            <div class="col-md-6 mb-3">
+                                                <label class="form-label">Kosten Gäste (€)</label>
+                                                <InputNumber class="form-control" step="0.01" @bind-Value="item.CostForGuest" />
+                                            </div>
+                                        </div>
+
+                                        <div class="row">
+                                            <div class="col-md-4 mb-3">
+                                                <div class="form-check">
+                                                    <InputCheckbox class="form-check-input" id="@($"mandatory-{index}")" @bind-Value="item.IsMandatory" />
+                                                    <label class="form-check-label" for="@($"mandatory-{index}")">
+                                                        Pflichtteilnahme
+                                                    </label>
+                                                </div>
+                                            </div>
+
+                                            <div class="col-md-4 mb-3">
+                                                <div class="form-check">
+                                                    <InputCheckbox class="form-check-input" id="@($"makler-{index}")" @bind-Value="item.MaklerCanParticipate" />
+                                                    <label class="form-check-label" for="@($"makler-{index}")">
+                                                        Makler können teilnehmen
+                                                    </label>
+                                                </div>
+                                            </div>
+
+                                            <div class="col-md-4 mb-3">
+                                                <div class="form-check">
+                                                    <InputCheckbox class="form-check-input" id="@($"guest-{index}")" @bind-Value="item.GuestsCanParticipate" />
+                                                    <label class="form-check-label" for="@($"guest-{index}")">
+                                                        Gäste können teilnehmen
+                                                    </label>
+                                                </div>
+                                            </div>
+                                        </div>
+
+                                        <div class="mb-3">
+                                            <label class="form-label">Max. Teilnehmer (optional)</label>
+                                            <InputNumber class="form-control" @bind-Value="item.MaxParticipants" />
+                                        </div>
+                                    </div>
+                                </div>
+                            }
+                        }
+                    </div>
+                </div>
+
+                <!-- Section 6: Zusatzoptionen (Extra Options) -->
+                <div class="card mb-4">
+                    <div class="card-header d-flex justify-content-between align-items-center">
+                        <h4 class="mb-0">Zusatzoptionen</h4>
+                        <button type="button" class="btn btn-sm btn-outline-primary" @onclick="AddExtraOption">
+                            <i class="bi bi-plus-circle"></i> Hinzufügen
+                        </button>
+                    </div>
+                    <div class="card-body">
+                        @if (!Model.EventOptions.Any())
+                        {
+                            <p class="text-muted">Keine Zusatzoptionen vorhanden.</p>
+                        }
+                        else
+                        {
+                            @for (int i = 0; i < Model.EventOptions.Count; i++)
+                            {
+                                var option = Model.EventOptions.ElementAt(i);
+                                var index = i;
+                                <div class="card mb-3">
+                                    <div class="card-header d-flex justify-content-between align-items-center">
+                                        <strong>Zusatzoption @(index + 1)</strong>
+                                        <button type="button" class="btn btn-sm btn-danger" @onclick="@(() => RemoveExtraOption(option))">
+                                            Entfernen
+                                        </button>
+                                    </div>
+                                    <div class="card-body">
+                                        <div class="mb-3">
+                                            <label class="form-label">Name *</label>
+                                            <InputText class="form-control" @bind-Value="option.Name" />
+                                        </div>
+
+                                        <div class="mb-3">
+                                            <label class="form-label">Beschreibung</label>
+                                            <InputTextArea class="form-control" rows="2" @bind-Value="option.Description" />
+                                        </div>
+
+                                        <div class="row">
+                                            <div class="col-md-6 mb-3">
+                                                <label class="form-label">Preis (€)</label>
+                                                <InputNumber class="form-control" step="0.01" @bind-Value="option.Price" />
+                                            </div>
+
+                                            <div class="col-md-6 mb-3">
+                                                <label class="form-label">Max. Anzahl (optional)</label>
+                                                <InputNumber class="form-control" @bind-Value="option.MaxQuantity" />
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            }
+                        }
+                    </div>
+                </div>
+
                 <!-- Form Buttons -->
                 <div class="d-flex justify-content-between mb-4">
                     <a href="/admin/events" class="btn btn-secondary">Abbrechen</a>
@@ -190,6 +349,20 @@
     private const long MaxFileSize = 10 * 1024 * 1024; // 10 MB
     private List<IBrowserFile> queuedFiles = new();
 
+    // Helper class for agenda item date tracking
+    private class AgendaItemDates
+    {
+        public DateTime StartCet { get; set; }
+        public DateTime EndCet { get; set; }
+    }
+
+    // Agenda item date tracking (CET display values)
+    private Dictionary<EventAgendaItem, AgendaItemDates> agendaItemDatesCet = new();
+
+    // Track removed items for deletion
+    private List<int> removedAgendaItemIds = new();
+    private List<int> removedOptionIds = new();
+
     protected override async Task OnInitializedAsync()
     {
         if (EventId.HasValue)
@@ -213,6 +386,16 @@
                 DateTime.SpecifyKind(Model.EndDateUtc, DateTimeKind.Utc));
             registrationDeadlineCet = TimeZoneHelper.ConvertUtcToCet(
                 DateTime.SpecifyKind(Model.RegistrationDeadlineUtc, DateTimeKind.Utc));
+
+            // Initialize agenda item CET dates
+            foreach (var item in Model.AgendaItems)
+            {
+                agendaItemDatesCet[item] = new AgendaItemDates
+                {
+                    StartCet = TimeZoneHelper.ConvertUtcToCet(DateTime.SpecifyKind(item.StartDateTimeUtc, DateTimeKind.Utc)),
+                    EndCet = TimeZoneHelper.ConvertUtcToCet(DateTime.SpecifyKind(item.EndDateTimeUtc, DateTimeKind.Utc))
+                };
+            }
         }
         else
         {
@@ -241,20 +424,32 @@
     {
         try
         {
-            // Convert CET dates back to UTC
+            // Convert CET dates back to UTC for event
             Model.StartDateUtc = TimeZoneHelper.ConvertCetToUtc(startDateCet);
             Model.EndDateUtc = TimeZoneHelper.ConvertCetToUtc(endDateCet);
             Model.RegistrationDeadlineUtc = TimeZoneHelper.ConvertCetToUtc(registrationDeadlineCet);
 
+            // Convert CET dates back to UTC for all agenda items
+            foreach (var item in Model.AgendaItems)
+            {
+                if (agendaItemDatesCet.ContainsKey(item))
+                {
+                    var dates = agendaItemDatesCet[item];
+                    item.StartDateTimeUtc = TimeZoneHelper.ConvertCetToUtc(dates.StartCet);
+                    item.EndDateTimeUtc = TimeZoneHelper.ConvertCetToUtc(dates.EndCet);
+                }
+            }
+
             if (isEditMode)
             {
                 // Update existing event
+                // Note: EF Core change tracking will handle AgendaItems and EventOptions modifications
                 await EventService.UpdateEventAsync(Model);
                 successMessage = "Veranstaltung erfolgreich aktualisiert.";
             }
             else
             {
-                // Create new event
+                // Create new event with all child collections
                 var createdEvent = await EventService.CreateEventAsync(Model);
 
                 // Upload queued files if any
@@ -353,5 +548,114 @@
         var fileName = Path.GetFileName(path);
         var underscoreIndex = fileName.IndexOf('_');
         return underscoreIndex > 0 ? fileName.Substring(underscoreIndex + 1) : fileName;
+    }
+
+    private void AddAgendaItem()
+    {
+        var newItem = new EventAgendaItem
+        {
+            EventId = Model.Id,
+            MaklerCanParticipate = true,
+            GuestsCanParticipate = true,
+            StartDateTimeUtc = Model.StartDateUtc,
+            EndDateTimeUtc = Model.EndDateUtc
+        };
+
+        // Add to collection
+        if (Model.AgendaItems is List<EventAgendaItem> list)
+        {
+            list.Add(newItem);
+        }
+        else
+        {
+            var newList = Model.AgendaItems.ToList();
+            newList.Add(newItem);
+            Model.AgendaItems = newList;
+        }
+
+        // Initialize CET dates for the new item
+        agendaItemDatesCet[newItem] = new AgendaItemDates
+        {
+            StartCet = TimeZoneHelper.ConvertUtcToCet(DateTime.SpecifyKind(newItem.StartDateTimeUtc, DateTimeKind.Utc)),
+            EndCet = TimeZoneHelper.ConvertUtcToCet(DateTime.SpecifyKind(newItem.EndDateTimeUtc, DateTimeKind.Utc))
+        };
+
+        StateHasChanged();
+    }
+
+    private void RemoveAgendaItem(EventAgendaItem item)
+    {
+        // Track for deletion if existing item
+        if (item.Id > 0)
+        {
+            removedAgendaItemIds.Add(item.Id);
+        }
+
+        // Remove from collection
+        if (Model.AgendaItems is List<EventAgendaItem> list)
+        {
+            list.Remove(item);
+        }
+        else
+        {
+            var newList = Model.AgendaItems.ToList();
+            newList.Remove(item);
+            Model.AgendaItems = newList;
+        }
+
+        // Remove from CET tracking
+        agendaItemDatesCet.Remove(item);
+
+        StateHasChanged();
+    }
+
+    private void AddExtraOption()
+    {
+        var newOption = new EventOption
+        {
+            EventId = Model.Id
+        };
+
+        if (Model.EventOptions is List<EventOption> list)
+        {
+            list.Add(newOption);
+        }
+        else
+        {
+            var newList = Model.EventOptions.ToList();
+            newList.Add(newOption);
+            Model.EventOptions = newList;
+        }
+
+        StateHasChanged();
+    }
+
+    private async Task RemoveExtraOption(EventOption option)
+    {
+        // If existing option, check if it can be deleted
+        if (option.Id > 0)
+        {
+            var result = await EventService.DeleteEventOptionAsync(option.Id);
+            if (!result.Success)
+            {
+                errorMessage = result.ErrorMessage;
+                StateHasChanged();
+                return;
+            }
+        }
+
+        // Remove from collection
+        if (Model.EventOptions is List<EventOption> list)
+        {
+            list.Remove(option);
+        }
+        else
+        {
+            var newList = Model.EventOptions.ToList();
+            newList.Remove(option);
+            Model.EventOptions = newList;
+        }
+
+        StateHasChanged();
     }
 }
