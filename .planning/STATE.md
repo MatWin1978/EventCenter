@@ -2,13 +2,13 @@
 gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
-status: in-progress
-last_updated: "2026-02-26T17:55:00.000Z"
+status: unknown
+last_updated: "2026-02-26T18:05:56.811Z"
 progress:
   total_phases: 3
   completed_phases: 2
   total_plans: 13
-  completed_plans: 9
+  completed_plans: 11
 ---
 
 # Project State
@@ -23,18 +23,18 @@ See: .planning/PROJECT.md (updated 2026-02-26)
 ## Current Position
 
 Phase: 3 of 8 (Makler Event Discovery & Registration)
-Plan: 2 of 5
+Plan: 3 of 5
 Status: In Progress
-Last activity: 2026-02-26 - Completed plan 03-01 (Domain Model and Service Contracts)
+Last activity: 2026-02-26 - Completed plan 03-02 (Business Logic Services)
 
-Progress: [███░░░░░░░] 30.0% (2/8 phases, 9/13 plans completed)
+Progress: [███░░░░░░░] 30.8% (2/8 phases, 10/13 plans completed)
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 9
-- Average duration: 6.1 minutes
-- Total execution time: 0.92 hours
+- Total plans completed: 10
+- Average duration: 5.6 minutes
+- Total execution time: 0.93 hours
 
 **By Phase:**
 
@@ -42,17 +42,17 @@ Progress: [███░░░░░░░] 30.0% (2/8 phases, 9/13 plans complet
 |-------|-------|-------|----------|
 | 01 | 4 | 1303s | 325.8s |
 | 02 | 4 | 2011s | 502.8s |
-| 03 | 1 | 199s | 199.0s |
+| 03 | 2 | 482s | 241.0s |
 
 **Recent Plans:**
 
 | Phase-Plan | Duration | Tasks | Files | Date |
 |------------|----------|-------|-------|------|
+| 03-02 | 283s (4.7m) | 2 | 5 | 2026-02-26 |
 | 03-01 | 199s (3.3m) | 2 | 14 | 2026-02-26 |
 | 02-04 | 362s (6.0m) | 2 | 1 | 2026-02-26 |
 | 02-03 | 413s (6.9m) | 2 | 3 | 2026-02-26 |
 | 02-02 | 744s (12.4m) | 2 | 3 | 2026-02-26 |
-| 02-01 | 492s (8.2m) | 2 | 15 | 2026-02-26 |
 
 ## Accumulated Context
 
@@ -90,6 +90,13 @@ Recent decisions affecting current work:
 - [Phase 03-01]: Use MailKit for SMTP email sending (industry standard, cross-platform)
 - [Phase 03-01]: Use Ical.Net for RFC 5545-compliant iCalendar export
 - [Phase 03-01]: Create DTO (RegistrationFormModel) for form validation instead of validating entity directly
+- [Phase 03-03]: Use MailKit SmtpClient with async/await for email sending
+- [Phase 03]: Use Database.BeginTransactionAsync for atomic registration creation
+- [Phase 03-03]: Use fire-and-forget pattern for email sending after registration (non-blocking)
+- [Phase 03]: Fire-and-forget email sending with try-catch logging to prevent blocking user flow
+- [Phase 03-03]: Calendar events use UTC timezone per Ical.Net recommendation
+- [Phase 03]: No pagination in GetPublicEventsAsync (expected < 500 events total)
+- [Phase 03-03]: Path traversal protection via Path.GetFileName() sanitization for document downloads
 
 ### Pending Todos
 
@@ -108,5 +115,5 @@ None yet.
 ## Session Continuity
 
 Last session: 2026-02-26
-Stopped at: Completed 03-01-PLAN.md execution
-Resume file: .planning/phases/03-makler-event-discovery-registration/03-01-SUMMARY.md
+Stopped at: Completed 03-02-PLAN.md execution
+Resume file: .planning/phases/03-makler-event-discovery-registration/03-02-SUMMARY.md

@@ -52,21 +52,21 @@
 
 ### Veranstaltungsübersicht (Makler)
 
-- [ ] **MLST-01**: Makler sieht Liste aller für ihn sichtbaren Veranstaltungen (US-13)
-- [ ] **MLST-02**: Makler kann nach Name/Ort suchen und nach Datum filtern (US-13)
-- [ ] **MLST-03**: Makler sieht Anmeldestatus pro Veranstaltung (Plätze frei, Angemeldet, Ausgebucht, Verpasst)
+- [x] **MLST-01**: Makler sieht Liste aller für ihn sichtbaren Veranstaltungen (US-13)
+- [x] **MLST-02**: Makler kann nach Name/Ort suchen und nach Datum filtern (US-13)
+- [x] **MLST-03**: Makler sieht Anmeldestatus pro Veranstaltung (Plätze frei, Angemeldet, Ausgebucht, Verpasst)
 
 ### Veranstaltungsdetail (Makler)
 
 - [ ] **MDET-01**: Makler sieht Veranstaltungsdetails (Titel, Beschreibung, Ort, Zeit, Kontakt) (US-14)
-- [ ] **MDET-02**: Makler kann Dokumente herunterladen (US-14)
+- [x] **MDET-02**: Makler kann Dokumente herunterladen (US-14)
 - [x] **MDET-03**: Makler kann Termin als iCalendar exportieren (US-16)
 
 ### Selbstanmeldung (Makler)
 
-- [ ] **MREG-01**: Makler kann sich für Veranstaltung anmelden mit Agendapunkt-Auswahl (US-15)
+- [x] **MREG-01**: Makler kann sich für Veranstaltung anmelden mit Agendapunkt-Auswahl (US-15)
 - [x] **MREG-02**: System prüft Deadline, Kapazität und Berechtigung vor Anmeldung
-- [ ] **MREG-03**: Makler sieht Teilnahmekosten pro Agendapunkt
+- [x] **MREG-03**: Makler sieht Teilnahmekosten pro Agendapunkt
 - [ ] **MREG-04**: Makler erhält Bestätigungsseite nach erfolgreicher Anmeldung
 
 ### Gastanmeldung (Makler)
@@ -150,15 +150,15 @@
 | PART-03 | Phase 7 | Pending |
 | PART-04 | Phase 7 | Pending |
 | PART-05 | Phase 7 | Pending |
-| MLST-01 | Phase 3 | Pending |
-| MLST-02 | Phase 3 | Pending |
-| MLST-03 | Phase 3 | Pending |
+| MLST-01 | Phase 3 | Complete |
+| MLST-02 | Phase 3 | Complete |
+| MLST-03 | Phase 3 | Complete |
 | MDET-01 | Phase 3 | Pending |
-| MDET-02 | Phase 3 | Pending |
+| MDET-02 | Phase 3 | Complete |
 | MDET-03 | Phase 3 | Complete (03-01) |
-| MREG-01 | Phase 3 | Pending |
+| MREG-01 | Phase 3 | Complete |
 | MREG-02 | Phase 3 | Complete (03-01) |
-| MREG-03 | Phase 3 | Pending |
+| MREG-03 | Phase 3 | Complete |
 | MREG-04 | Phase 3 | Pending |
 | GREG-01 | Phase 6 | Pending |
 | GREG-02 | Phase 6 | Pending |
