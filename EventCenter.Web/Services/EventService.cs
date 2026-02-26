@@ -310,4 +310,47 @@ public class EventService
 
         return Task.CompletedTask;
     }
+
+    /// <summary>
+    /// Retrieves published events for public display with optional filtering.
+    /// Returns events sorted by start date ascending (nearest first).
+    /// Includes Registrations and AgendaItems for display logic.
+    /// </summary>
+    public async Task<List<Event>> GetPublicEventsAsync(
+        string? searchTerm,
+        DateTime? startDateFrom,
+        DateTime? startDateTo,
+        string? userEmail)
+    {
+        var query = _context.Events
+            .Include(e => e.Registrations)
+            .Include(e => e.AgendaItems)
+            .Where(e => e.IsPublished)
+            .AsQueryable();
+
+        // Filter by search term (title or location)
+        if (!string.IsNullOrWhiteSpace(searchTerm))
+        {
+            var searchLower = searchTerm.ToLower();
+            query = query.Where(e =>
+                e.Title.ToLower().Contains(searchLower) ||
+                e.Location.ToLower().Contains(searchLower));
+        }
+
+        // Filter by date range
+        if (startDateFrom.HasValue)
+        {
+            query = query.Where(e => e.StartDateUtc >= startDateFrom.Value);
+        }
+
+        if (startDateTo.HasValue)
+        {
+            query = query.Where(e => e.StartDateUtc <= startDateTo.Value);
+        }
+
+        // Sort by start date ascending (nearest events first)
+        query = query.OrderBy(e => e.StartDateUtc);
+
+        return await query.ToListAsync();
+    }
 }
