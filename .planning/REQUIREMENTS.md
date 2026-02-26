@@ -26,7 +26,7 @@
 ### Agendapunkte (Admin)
 
 - [x] **AGND-01**: Admin kann Agendapunkt anlegen mit Kosten für Makler/Gäste (US-05)
-- [ ] **AGND-02**: Admin kann Agendapunkt bearbeiten und löschen (US-06)
+- [x] **AGND-02**: Admin kann Agendapunkt bearbeiten und löschen (US-06)
 - [x] **AGND-03**: Admin kann Teilnahme für Makler oder Gäste pro Agendapunkt deaktivieren
 
 ### Zusatzoptionen (Admin)
@@ -136,7 +136,7 @@
 | WBNR-01 | Phase 8 | Pending |
 | WBNR-02 | Phase 8 | Pending |
 | AGND-01 | Phase 2 | Complete |
-| AGND-02 | Phase 2 | Pending |
+| AGND-02 | Phase 2 | Complete |
 | AGND-03 | Phase 2 | Complete |
 | XOPT-01 | Phase 2 | Complete |
 | XOPT-02 | Phase 2 | Complete |
