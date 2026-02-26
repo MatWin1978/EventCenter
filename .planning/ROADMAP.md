@@ -12,7 +12,7 @@ This roadmap delivers a complete event management system for brokers and invited
 
 Decimal phases appear between their surrounding integers in numeric order.
 
-- [ ] **Phase 1: Foundation & Authentication** - Establish Blazor Server infrastructure, authentication, and domain model
+- [x] **Phase 1: Foundation & Authentication** - Establish Blazor Server infrastructure, authentication, and domain model (completed 2026-02-26)
 - [ ] **Phase 2: Admin Event Management** - Enable admins to create and configure events with agenda items and options
 - [ ] **Phase 3: Makler Event Discovery & Registration** - Allow brokers to browse events and self-register with agenda selection
 - [ ] **Phase 4: Company Invitations** - Enable admins to invite companies with custom pricing
@@ -158,7 +158,7 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6 → 7 → 8
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 1. Foundation & Authentication | 2/4 | In Progress|  |
+| 1. Foundation & Authentication | 4/4 | Complete   | 2026-02-26 |
 | 2. Admin Event Management | 0/TBD | Not started | - |
 | 3. Makler Event Discovery & Registration | 0/TBD | Not started | - |
 | 4. Company Invitations | 0/TBD | Not started | - |
