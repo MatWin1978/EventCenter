@@ -1,6 +1,7 @@
 using EventCenter.Web.Components;
 using EventCenter.Web.Domain;
 using EventCenter.Web.Infrastructure.Authentication;
+using EventCenter.Web.Services;
 using EventCenter.Web.Validators;
 using FluentValidation;
 using Microsoft.EntityFrameworkCore;
@@ -36,6 +37,9 @@ builder.Services.AddDbContext<EventCenterDbContext>(options =>
 
 // Configure FluentValidation
 builder.Services.AddValidatorsFromAssemblyContaining<EventValidator>();
+
+// Register application services
+builder.Services.AddScoped<EventService>();
 
 // Configure Authentication with Keycloak OIDC
 builder.Services.AddAuthentication(options =>
