@@ -3,12 +3,12 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: unknown
-last_updated: "2026-02-27T08:14:32.065Z"
+last_updated: "2026-02-27T09:37:13.162Z"
 progress:
   total_phases: 4
-  completed_phases: 3
+  completed_phases: 4
   total_plans: 16
-  completed_plans: 14
+  completed_plans: 16
 ---
 
 # Project State
@@ -23,18 +23,18 @@ See: .planning/PROJECT.md (updated 2026-02-26)
 ## Current Position
 
 Phase: 4 of 8 (Company Invitations)
-Plan: 1 of 3
-Status: In Progress
-Last activity: 2026-02-27 - Completed plan 04-01 (Domain Model & Email Infrastructure)
+Plan: 3 of 3
+Status: Complete
+Last activity: 2026-02-27 - Completed plan 04-03 (Admin Company Invitation UI)
 
-Progress: [███░░░░░░░] 37.5% (3/8 phases, 14/16 plans completed)
+Progress: [████░░░░░░] 50.0% (4/8 phases, 16/16 plans completed)
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 14
-- Average duration: 5.1 minutes
-- Total execution time: 1.19 hours
+- Total plans completed: 16
+- Average duration: 5.5 minutes
+- Total execution time: 1.47 hours
 
 **By Phase:**
 
@@ -43,17 +43,17 @@ Progress: [███░░░░░░░] 37.5% (3/8 phases, 14/16 plans comple
 | 01 | 4 | 1303s | 325.8s |
 | 02 | 4 | 2011s | 502.8s |
 | 03 | 5 | 1402s | 280.4s |
-| 04 | 1 | 258s | 258.0s |
+| 04 | 3 | 1094s | 364.7s |
 
 **Recent Plans:**
 
 | Phase-Plan | Duration | Tasks | Files | Date |
 |------------|----------|-------|-------|------|
+| 04-03 | 318s (5.3m) | 3 | 2 | 2026-02-27 |
+| 04-02 | 518s (8.6m) | 1 | 6 | 2026-02-27 |
 | 04-01 | 258s (4.3m) | 2 | 11 | 2026-02-27 |
 | 03-05 | 269s (4.5m) | 3 | 3 | 2026-02-26 |
 | 03-04 | 169s (2.8m) | 2 | 2 | 2026-02-26 |
-| 03-03 | 199s (3.3m) | 2 | 0 | 2026-02-26 |
-| 03-02 | 283s (4.7m) | 2 | 5 | 2026-02-26 |
 
 ## Accumulated Context
 
@@ -110,6 +110,15 @@ Recent decisions affecting current work:
 - [Phase 04-01]: Add unique filtered index on InvitationCode to prevent duplicate codes (when not null)
 - [Phase 04-01]: Include ExpiresAtUtc field now for Phase 5 GUID expiration (leave null until needed)
 - [Phase 04-01]: Email template shows base price vs custom price in table format for transparency
+- [Phase 04]: Pricing always editable in all invitation statuses (affects future invoicing)
+- [Phase 04]: Always store agenda item prices even if equal to base price (simplifies UI queries)
+- [Phase 04]: Fire-and-forget email pattern with Task.Run + try-catch logging (non-blocking UX)
+- [Phase 04-03]: Status-dependent action buttons show only valid actions (no disabled buttons)
+- [Phase 04-03]: Base price displayed as reference in pricing table (text-muted) with separate discount/override columns
+- [Phase 04-03]: Percentage discount shows calculated preview without auto-populating ManualOverride fields
+- [Phase 04-03]: Email preview section collapsible with iframe/sanitized HTML rendering
+- [Phase 04-03]: Save as draft vs Create & Send action buttons for flexible workflow
+- [Phase 04-03]: Batch mode uses standard pricing with optional shared percentage discount
 
 ### Pending Todos
 
@@ -128,5 +137,5 @@ None yet.
 ## Session Continuity
 
 Last session: 2026-02-27
-Stopped at: Completed 04-01-PLAN.md execution
-Resume file: .planning/phases/04-company-invitations/04-01-SUMMARY.md
+Stopped at: Completed 04-03-PLAN.md execution
+Resume file: .planning/phases/04-company-invitations/04-03-SUMMARY.md
