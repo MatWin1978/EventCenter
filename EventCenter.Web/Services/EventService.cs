@@ -1,5 +1,6 @@
 using EventCenter.Web.Domain;
 using EventCenter.Web.Domain.Entities;
+using EventCenter.Web.Domain.Enums;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.EntityFrameworkCore;
 
@@ -46,11 +47,18 @@ public class EventService
         string? sortColumn,
         bool ascending,
         int page,
-        int pageSize)
+        int pageSize,
+        EventType? typeFilter = null)
     {
         var query = _context.Events
             .Include(e => e.Registrations)
             .AsQueryable();
+
+        // Filter by event type if specified
+        if (typeFilter.HasValue)
+        {
+            query = query.Where(e => e.EventType == typeFilter.Value);
+        }
 
         // Filter past events if requested
         if (!includePast)
@@ -79,9 +87,15 @@ public class EventService
     /// <summary>
     /// Returns the total count of events for pagination.
     /// </summary>
-    public async Task<int> GetEventCountAsync(bool includePast)
+    public async Task<int> GetEventCountAsync(bool includePast, EventType? typeFilter = null)
     {
         var query = _context.Events.AsQueryable();
+
+        // Filter by event type if specified
+        if (typeFilter.HasValue)
+        {
+            query = query.Where(e => e.EventType == typeFilter.Value);
+        }
 
         if (!includePast)
         {
@@ -102,18 +116,25 @@ public class EventService
 
     /// <summary>
     /// Publishes an event by setting IsPublished to true.
+    /// For webinars, requires ExternalRegistrationUrl to be set.
     /// </summary>
-    public async Task<bool> PublishEventAsync(int eventId)
+    public async Task<(bool Success, string? ErrorMessage)> PublishEventAsync(int eventId)
     {
         var evt = await _context.Events.FindAsync(eventId);
         if (evt == null)
         {
-            return false;
+            return (false, "Veranstaltung nicht gefunden.");
+        }
+
+        if (evt.EventType == EventType.Webinar &&
+            string.IsNullOrWhiteSpace(evt.ExternalRegistrationUrl))
+        {
+            return (false, "Webinar kann nicht veröffentlicht werden ohne externe Anmelde-URL.");
         }
 
         evt.IsPublished = true;
         await _context.SaveChangesAsync();
-        return true;
+        return (true, null);
     }
 
     /// <summary>
@@ -196,7 +217,9 @@ public class EventService
             ContactName = source.ContactName,
             ContactEmail = source.ContactEmail,
             ContactPhone = source.ContactPhone,
-            DocumentPaths = new List<string>(source.DocumentPaths)
+            DocumentPaths = new List<string>(source.DocumentPaths),
+            EventType = source.EventType,
+            ExternalRegistrationUrl = source.ExternalRegistrationUrl
         };
 
         // Copy AgendaItems with relative time offsets preserved

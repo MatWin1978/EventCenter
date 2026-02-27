@@ -272,10 +272,11 @@ public class EventServiceTests : IDisposable
         await _context.SaveChangesAsync();
 
         // Act
-        var result = await _service.PublishEventAsync(evt.Id);
+        var (success, error) = await _service.PublishEventAsync(evt.Id);
 
         // Assert
-        Assert.True(result);
+        Assert.True(success);
+        Assert.Null(error);
         var updated = await _context.Events.FindAsync(evt.Id);
         Assert.NotNull(updated);
         Assert.True(updated.IsPublished);

@@ -1,5 +1,6 @@
 using FluentValidation;
 using EventCenter.Web.Domain.Entities;
+using EventCenter.Web.Domain.Enums;
 
 namespace EventCenter.Web.Validators;
 
@@ -26,10 +27,12 @@ public class EventValidator : AbstractValidator<Event>
 
         RuleFor(e => e.RegistrationDeadlineUtc)
             .LessThanOrEqualTo(e => e.StartDateUtc)
-            .WithMessage("Anmeldefrist muss vor Veranstaltungsbeginn liegen");
+            .WithMessage("Anmeldefrist muss vor Veranstaltungsbeginn liegen")
+            .When(e => e.EventType == EventType.InPerson);
 
         RuleFor(e => e.MaxCapacity)
-            .GreaterThan(0).WithMessage("Maximale Kapazität muss größer als 0 sein");
+            .GreaterThan(0).WithMessage("Maximale Kapazität muss größer als 0 sein")
+            .When(e => e.EventType == EventType.InPerson);
 
         RuleFor(e => e.MaxCompanions)
             .GreaterThanOrEqualTo(0).WithMessage("Maximale Begleitpersonen darf nicht negativ sein");
@@ -43,8 +46,14 @@ public class EventValidator : AbstractValidator<Event>
             .MaximumLength(50)
             .WithMessage("Telefonnummer darf maximal 50 Zeichen lang sein");
 
+        RuleFor(e => e.ExternalRegistrationUrl)
+            .Must(url => string.IsNullOrEmpty(url) || Uri.IsWellFormedUriString(url, UriKind.Absolute))
+            .WithMessage("Bitte eine gültige URL eingeben (z.B. https://...)")
+            .When(e => e.EventType == EventType.Webinar);
+
         RuleForEach(e => e.AgendaItems)
-            .SetValidator(new EventAgendaItemValidator());
+            .SetValidator(new EventAgendaItemValidator())
+            .When(e => e.EventType == EventType.InPerson);
 
         RuleForEach(e => e.EventOptions)
             .SetValidator(new EventOptionValidator());

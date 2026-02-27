@@ -299,7 +299,7 @@
     {
         showConfirmDialog = false;
 
-        var success = await EventService.PublishEventAsync(eventId);
+        var (success, error) = await EventService.PublishEventAsync(eventId);
 
         if (success)
         {
@@ -307,7 +307,7 @@
         }
         else
         {
-            errorMessage = "Fehler beim Veröffentlichen der Veranstaltung.";
+            errorMessage = error ?? "Fehler beim Veröffentlichen der Veranstaltung.";
         }
     }
 
