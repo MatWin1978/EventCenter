@@ -143,10 +143,13 @@ Plans:
   4. System correctly updates registration counts after cancellations
   5. Admin can view participant lists for any event and filter by company
   6. Admin can export participant data, contact information, non-participants, and company lists to Excel/CSV
-**Plans**: TBD
+**Plans**: 4 plans
 
 Plans:
-- [ ] TBD after phase planning
+- [ ] 07-01-PLAN.md — Cancellation service with TDD (CancelRegistrationAsync, domain changes, email templates)
+- [ ] 07-02-PLAN.md — Participant export service with ClosedXML (4 Excel export types, query service)
+- [ ] 07-03-PLAN.md — Cancellation UI on EventDetail page (cancel button, confirmation modal, deadline enforcement)
+- [ ] 07-04-PLAN.md — Admin participant list page with table, filtering, export dropdown, and EF Core migration
 
 ### Phase 8: Webinar Support
 **Goal**: System supports webinar events with external registration links alongside in-person events
