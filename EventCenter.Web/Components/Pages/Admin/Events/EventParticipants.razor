@@ -1,0 +1,247 @@
+@page "/admin/events/{EventId:int}/participants"
+@using EventCenter.Web.Domain.Entities
+@using EventCenter.Web.Domain.Enums
+@using EventCenter.Web.Services
+@using Microsoft.AspNetCore.Authorization
+@using Microsoft.JSInterop
+@attribute [Authorize(Roles = "Admin")]
+@inject ParticipantQueryService ParticipantQueryService
+@inject ParticipantExportService ParticipantExportService
+@inject EventService EventService
+@inject NavigationManager NavigationManager
+@inject IJSRuntime JSRuntime
+
+<PageTitle>Teilnehmer - @(evt?.Title ?? "...")</PageTitle>
+
+<div class="container-fluid py-4">
+    @if (isLoading)
+    {
+        <div class="text-center py-5">
+            <div class="spinner-border text-primary" role="status">
+                <span class="visually-hidden">Lädt...</span>
+            </div>
+        </div>
+    }
+    else
+    {
+        <!-- Breadcrumb navigation -->
+        <nav aria-label="breadcrumb" class="mb-3">
+            <ol class="breadcrumb">
+                <li class="breadcrumb-item"><a href="/admin/events">Veranstaltungen</a></li>
+                <li class="breadcrumb-item"><a href="/admin/events/edit/@EventId">@evt?.Title</a></li>
+                <li class="breadcrumb-item active">Teilnehmer</li>
+            </ol>
+        </nav>
+
+        <!-- Page header with export dropdown -->
+        <div class="d-flex justify-content-between align-items-center mb-4">
+            <h2>Teilnehmer — @evt?.Title</h2>
+            <div class="dropdown">
+                <button class="btn btn-success dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false" disabled="@isExporting">
+                    <i class="bi bi-download"></i> @(isExporting ? "Exportiere..." : "Export")
+                </button>
+                <ul class="dropdown-menu">
+                    <li><button class="dropdown-item" @onclick="ExportParticipantList">Teilnehmerliste</button></li>
+                    <li><button class="dropdown-item" @onclick="ExportContactData">Kontaktdaten</button></li>
+                    <li><button class="dropdown-item" @onclick="ExportNonParticipants">Nicht-Teilnehmer</button></li>
+                    <li><button class="dropdown-item" @onclick="ExportCompanyList">Firmenliste</button></li>
+                </ul>
+            </div>
+        </div>
+
+        @if (!string.IsNullOrEmpty(errorMessage))
+        {
+            <div class="alert alert-danger alert-dismissible fade show" role="alert">
+                @errorMessage
+                <button type="button" class="btn-close" @onclick="() => errorMessage = null"></button>
+            </div>
+        }
+
+        <!-- Summary stats -->
+        <div class="d-flex gap-3 mb-3">
+            <span class="badge bg-success fs-6">Aktiv: @allParticipants.Count(p => !p.IsCancelled)</span>
+            <span class="badge bg-secondary fs-6">Storniert: @allParticipants.Count(p => p.IsCancelled)</span>
+            <span class="badge bg-primary fs-6">Gesamt: @allParticipants.Count</span>
+        </div>
+
+        <!-- Company filter -->
+        <div class="mb-3">
+            <div class="input-group" style="max-width: 400px;">
+                <span class="input-group-text"><i class="bi bi-funnel"></i></span>
+                <input type="text" class="form-control" placeholder="Nach Firma filtern..."
+                       @bind="companyFilter" @bind:event="oninput" @bind:after="ApplyFilter" />
+                @if (!string.IsNullOrEmpty(companyFilter))
+                {
+                    <button class="btn btn-outline-secondary" @onclick="ClearFilter">
+                        <i class="bi bi-x"></i>
+                    </button>
+                }
+            </div>
+        </div>
+
+        @if (allParticipants.Count == 0)
+        {
+            <div class="alert alert-info">
+                Noch keine Anmeldungen für diese Veranstaltung.
+            </div>
+        }
+        else if (filteredParticipants.Count == 0)
+        {
+            <div class="alert alert-warning">
+                Keine Teilnehmer für den aktuellen Filter gefunden.
+            </div>
+        }
+        else
+        {
+            <!-- Participant table -->
+            <div class="table-responsive">
+                <table class="table table-striped table-hover">
+                    <thead>
+                        <tr>
+                            <th>Name</th>
+                            <th>E-Mail</th>
+                            <th>Firma</th>
+                            <th>Typ</th>
+                            <th>Status</th>
+                            <th>Stornierungsgrund</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var p in filteredParticipants)
+                        {
+                            <tr class="@(p.IsCancelled ? "table-secondary" : "")">
+                                <td>@p.FirstName @p.LastName</td>
+                                <td>@p.Email</td>
+                                <td>@GetCompanyName(p)</td>
+                                <td>
+                                    @switch (p.RegistrationType)
+                                    {
+                                        case RegistrationType.Makler:
+                                            <span class="badge bg-primary">Makler</span>
+                                            break;
+                                        case RegistrationType.Guest:
+                                            <span class="badge bg-info">Gast</span>
+                                            break;
+                                        case RegistrationType.CompanyParticipant:
+                                            <span class="badge bg-warning text-dark">Firma</span>
+                                            break;
+                                    }
+                                </td>
+                                <td>
+                                    @if (p.IsCancelled)
+                                    {
+                                        <span class="badge bg-secondary">Storniert</span>
+                                    }
+                                    else
+                                    {
+                                        <span class="badge bg-success">Aktiv</span>
+                                    }
+                                </td>
+                                <td>@(p.CancellationReason ?? "-")</td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        }
+    }
+</div>
+
+@code {
+    [Parameter] public int EventId { get; set; }
+
+    private Event? evt;
+    private List<Registration> allParticipants = new();
+    private List<Registration> filteredParticipants = new();
+    private string companyFilter = "";
+    private bool isExporting = false;
+    private bool isLoading = true;
+    private string? errorMessage;
+
+    protected override async Task OnInitializedAsync()
+    {
+        try
+        {
+            evt = await EventService.GetEventByIdAsync(EventId);
+            if (evt == null)
+            {
+                NavigationManager.NavigateTo("/admin/events");
+                return;
+            }
+            allParticipants = await ParticipantQueryService.GetParticipantsAsync(EventId);
+            filteredParticipants = allParticipants;
+        }
+        catch (Exception ex)
+        {
+            errorMessage = $"Fehler beim Laden der Teilnehmer: {ex.Message}";
+        }
+        finally
+        {
+            isLoading = false;
+        }
+    }
+
+    private void ApplyFilter()
+    {
+        if (string.IsNullOrWhiteSpace(companyFilter))
+        {
+            filteredParticipants = allParticipants;
+        }
+        else
+        {
+            filteredParticipants = allParticipants
+                .Where(p => GetCompanyName(p).Contains(companyFilter, StringComparison.OrdinalIgnoreCase))
+                .ToList();
+        }
+    }
+
+    private void ClearFilter()
+    {
+        companyFilter = "";
+        filteredParticipants = allParticipants;
+    }
+
+    private string GetCompanyName(Registration r)
+    {
+        return r.EventCompany?.CompanyName ?? r.Company ?? "N/A";
+    }
+
+    // Export methods using JS interop to trigger file download
+    private async Task ExportParticipantList() => await DownloadExcel(
+        () => ParticipantExportService.ExportParticipantListAsync(EventId),
+        $"Teilnehmerliste_{evt!.Title}_{DateTime.Now:yyyyMMdd}.xlsx");
+
+    private async Task ExportContactData() => await DownloadExcel(
+        () => ParticipantExportService.ExportContactDataAsync(EventId),
+        $"Kontaktdaten_{evt!.Title}_{DateTime.Now:yyyyMMdd}.xlsx");
+
+    private async Task ExportNonParticipants() => await DownloadExcel(
+        () => ParticipantExportService.ExportNonParticipantsAsync(EventId),
+        $"NichtTeilnehmer_{evt!.Title}_{DateTime.Now:yyyyMMdd}.xlsx");
+
+    private async Task ExportCompanyList() => await DownloadExcel(
+        () => ParticipantExportService.ExportCompanyListAsync(EventId),
+        $"Firmenliste_{evt!.Title}_{DateTime.Now:yyyyMMdd}.xlsx");
+
+    private async Task DownloadExcel(Func<Task<byte[]>> exportFunc, string fileName)
+    {
+        isExporting = true;
+        StateHasChanged();
+        try
+        {
+            var bytes = await exportFunc();
+            var base64 = Convert.ToBase64String(bytes);
+            await JSRuntime.InvokeVoidAsync("downloadFile", fileName,
+                "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", base64);
+        }
+        catch (Exception ex)
+        {
+            errorMessage = $"Fehler beim Exportieren: {ex.Message}";
+        }
+        finally
+        {
+            isExporting = false;
+            StateHasChanged();
+        }
+    }
+}

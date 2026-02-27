@@ -113,6 +113,9 @@
                             </td>
                             <td>
                                 <div class="btn-group btn-group-sm" role="group">
+                                    <a href="/admin/events/@evt.Id/participants" class="btn btn-outline-info">
+                                        <span class="bi bi-people"></span> Teilnehmer
+                                    </a>
                                     <button class="btn btn-outline-primary" @onclick="@(() => NavigationManager.NavigateTo($"/admin/events/edit/{evt.Id}"))">
                                         <span class="bi bi-pencil"></span> Bearbeiten
                                     </button>
