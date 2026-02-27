@@ -89,10 +89,12 @@ Plans:
   3. Admin can view invitation status (sent, booking received, cancelled) for each company
   4. Admin can delete company invitations that have not yet been booked
   5. System generates cryptographically strong GUIDs for company access links
-**Plans**: TBD
+**Plans**: 3 plans
 
 Plans:
-- [ ] TBD after phase planning
+- [ ] 04-01-PLAN.md — Domain model extensions, per-item pricing entity, email template, validators, and migration
+- [ ] 04-02-PLAN.md — CompanyInvitationService with TDD (CRUD, GUID generation, pricing calculation, email triggering)
+- [ ] 04-03-PLAN.md — Admin UI: invitation status table with sorting and management, invitation form with pricing configuration
 
 ### Phase 5: Company Booking Portal
 **Goal**: Company representatives can access booking page via GUID link and submit participant lists
@@ -168,7 +170,7 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6 → 7 → 8
 | 1. Foundation & Authentication | 4/4 | Complete   | 2026-02-26 |
 | 2. Admin Event Management | 4/4 | Complete   | 2026-02-26 |
 | 3. Makler Event Discovery & Registration | 3/5 | In Progress|  |
-| 4. Company Invitations | 0/TBD | Not started | - |
+| 4. Company Invitations | 0/3 | Not started | - |
 | 5. Company Booking Portal | 0/TBD | Not started | - |
 | 6. Guest Management | 0/TBD | Not started | - |
 | 7. Cancellation & Participant Management | 0/TBD | Not started | - |
