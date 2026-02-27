@@ -3,12 +3,12 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: unknown
-last_updated: "2026-02-27T13:48:28.380Z"
+last_updated: "2026-02-27T15:38:08.360Z"
 progress:
-  total_phases: 6
+  total_phases: 7
   completed_phases: 6
-  total_plans: 21
-  completed_plans: 21
+  total_plans: 25
+  completed_plans: 22
 ---
 
 # Project State
@@ -18,16 +18,16 @@ progress:
 See: .planning/PROJECT.md (updated 2026-02-26)
 
 **Core value:** Makler und eingeladene Firmen können sich reibungslos für Veranstaltungen anmelden, Agendapunkte auswählen und ihre Teilnahme verwalten.
-**Current focus:** Phase 6 - Guest Management
+**Current focus:** Phase 7 - Cancellation & Participant Management
 
 ## Current Position
 
-Phase: 6 of 8 (Guest Management)
-Plan: 2 of 2
-Status: Complete
-Last activity: 2026-02-27 - Completed plan 06-02 (Guest Management UI)
+Phase: 7 of 8 (Cancellation & Participant Management)
+Plan: 1 of 4
+Status: In Progress
+Last activity: 2026-02-27 - Completed plan 07-01 (Cancellation Service Logic)
 
-Progress: [██████████] 100.0% (6/6 phases, 21/21 plans completed)
+Progress: [██████████] 88.0% (6/8 phases, 22/25 plans completed)
 
 ## Performance Metrics
 
@@ -51,11 +51,11 @@ Progress: [██████████] 100.0% (6/6 phases, 21/21 plans compl
 
 | Phase-Plan | Duration | Tasks | Files | Date |
 |------------|----------|-------|-------|------|
+| 07-01 | 241s (4.0m) | 2 | 7 | 2026-02-27 |
 | 06-02 | 446s (7.4m) | 2 | 3 | 2026-02-27 |
 | 06-01 | 905s (15.1m) | 3 | 10 | 2026-02-27 |
 | 05-03 | 3478s (57.9m) | 3 | 1 | 2026-02-27 |
 | 05-02 | 430s (7.2m) | 3 | 4 | 2026-02-27 |
-| 05-01 | 179s (3.0m) | 3 | 7 | 2026-02-27 |
 
 ## Accumulated Context
 
@@ -139,6 +139,9 @@ Recent decisions affecting current work:
 - [Phase 06-02]: Manual checkbox state management using HashSet and @onchange handlers (not InputCheckbox with bind)
 - [Phase 06-02]: Pre-select mandatory agenda items when guest form opens
 - [Phase 06-02]: One-guest-at-a-time registration flow (form collapses after successful submission)
+- [Phase 07-01]: Cancelling broker registration does NOT cascade to guest registrations (per locked user decision)
+- [Phase 07-01]: CancellationReason stored as nullable string for audit trail
+- [Phase 07-01]: Deadline check uses GetCurrentState() == EventState.Public (consistent with registration state machine)
 
 ### Pending Todos
 
@@ -157,5 +160,5 @@ None yet.
 ## Session Continuity
 
 Last session: 2026-02-27
-Stopped at: Completed 06-02-PLAN.md execution (Phase 6 complete)
-Resume file: .planning/phases/06-guest-management/06-02-SUMMARY.md
+Stopped at: Completed 07-01-PLAN.md execution
+Resume file: .planning/phases/07-cancellation-participant-management/07-01-SUMMARY.md

@@ -77,10 +77,10 @@
 
 ### Stornierung (Makler)
 
-- [ ] **MCAN-01**: Makler kann eigene Anmeldung stornieren (US-18)
-- [ ] **MCAN-02**: Makler kann Gastanmeldung stornieren (US-19)
-- [ ] **MCAN-03**: System prüft Storno-Berechtigung (nur Ersteller darf stornieren)
-- [ ] **MCAN-04**: System aktualisiert RegistrationCount nach Stornierung
+- [x] **MCAN-01**: Makler kann eigene Anmeldung stornieren (US-18)
+- [x] **MCAN-02**: Makler kann Gastanmeldung stornieren (US-19)
+- [x] **MCAN-03**: System prüft Storno-Berechtigung (nur Ersteller darf stornieren)
+- [x] **MCAN-04**: System aktualisiert RegistrationCount nach Stornierung
 
 ### Firmenbuchung (Unternehmensvertreter)
 
@@ -163,10 +163,10 @@
 | GREG-01 | Phase 6 | Complete |
 | GREG-02 | Phase 6 | Complete |
 | GREG-03 | Phase 6 | Complete |
-| MCAN-01 | Phase 7 | Pending |
-| MCAN-02 | Phase 7 | Pending |
-| MCAN-03 | Phase 7 | Pending |
-| MCAN-04 | Phase 7 | Pending |
+| MCAN-01 | Phase 7 | Complete |
+| MCAN-02 | Phase 7 | Complete |
+| MCAN-03 | Phase 7 | Complete |
+| MCAN-04 | Phase 7 | Complete |
 | CBOK-01 | Phase 5 | Complete |
 | CBOK-02 | Phase 5 | Complete |
 | CBOK-03 | Phase 5 | Complete |
