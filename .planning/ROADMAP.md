@@ -109,10 +109,12 @@ Plans:
   6. Company representative can cancel booking or report non-participation
   7. Admin receives email notification when company submits or cancels booking
   8. System enforces GUID expiration and rate limiting to prevent enumeration attacks
-**Plans**: TBD
+**Plans**: 3 plans
 
 Plans:
-- [ ] TBD after phase planning
+- [ ] 05-01-PLAN.md — Domain extensions, DTOs, validators, admin email notifications, and rate limiting configuration
+- [ ] 05-02-PLAN.md — CompanyBookingService TDD (GUID validation, booking submission, cancellation, non-participation)
+- [ ] 05-03-PLAN.md — Company booking portal UI (anonymous page with booking form, participant table, cost summary, booking management)
 
 ### Phase 6: Guest Management
 **Goal**: Brokers can register companions (guests) for events within configured limits
