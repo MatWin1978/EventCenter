@@ -19,7 +19,7 @@ Decimal phases appear between their surrounding integers in numeric order.
 - [ ] **Phase 5: Company Booking Portal** - Anonymous company representative booking via GUID links
 - [x] **Phase 6: Guest Management** - Brokers can register companions with limit enforcement (completed 2026-02-27)
 - [x] **Phase 7: Cancellation & Participant Management** - Registration cancellation and admin export capabilities (completed 2026-02-27)
-- [ ] **Phase 8: Webinar Support** - Support for webinar events alongside in-person events
+- [x] **Phase 8: Webinar Support** - Support for webinar events alongside in-person events (completed 2026-02-27)
 
 ## Phase Details
 
@@ -180,4 +180,4 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6 → 7 → 8
 | 5. Company Booking Portal | 0/TBD | Not started | - |
 | 6. Guest Management | 2/2 | Complete   | 2026-02-27 |
 | 7. Cancellation & Participant Management | 4/4 | Complete   | 2026-02-27 |
-| 8. Webinar Support | 1/3 | In Progress | - |
+| 8. Webinar Support | 3/3 | Complete   | 2026-02-27 |
