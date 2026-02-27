@@ -2,6 +2,7 @@
 @attribute [Authorize(Roles = "Admin")]
 @layout MainLayout
 @using EventCenter.Web.Domain.Entities
+@using EventCenter.Web.Domain.Enums
 @using EventCenter.Web.Domain.Extensions
 @using EventCenter.Web.Services
 @using EventCenter.Web.Infrastructure.Helpers
@@ -42,6 +43,21 @@
         </div>
     }
 
+    <ul class="nav nav-tabs mb-3">
+        <li class="nav-item">
+            <button class="nav-link @(typeFilter == null ? "active" : "")"
+                    @onclick="@(() => SetTypeFilter(null))">Alle</button>
+        </li>
+        <li class="nav-item">
+            <button class="nav-link @(typeFilter == EventType.InPerson ? "active" : "")"
+                    @onclick="@(() => SetTypeFilter(EventType.InPerson))">Präsenzveranstaltung</button>
+        </li>
+        <li class="nav-item">
+            <button class="nav-link @(typeFilter == EventType.Webinar ? "active" : "")"
+                    @onclick="@(() => SetTypeFilter(EventType.Webinar))">Webinar</button>
+        </li>
+    </ul>
+
     @if (isLoading)
     {
         <div class="text-center my-5">
@@ -72,6 +88,7 @@
                                 }
                             </button>
                         </th>
+                        <th>Typ</th>
                         <th>
                             <button class="btn btn-link text-decoration-none p-0" @onclick="@(() => SortBy("StartDateUtc"))">
                                 Datum
@@ -101,6 +118,18 @@
                     {
                         <tr>
                             <td>@evt.Title</td>
+                            <td>
+                                @if (evt.EventType == EventType.Webinar)
+                                {
+                                    <span class="badge bg-info">
+                                        <i class="bi bi-camera-video"></i> Webinar
+                                    </span>
+                                }
+                                else
+                                {
+                                    <span class="badge bg-secondary">Präsenz</span>
+                                }
+                            </td>
                             <td>@TimeZoneHelper.FormatDateTimeCet(evt.StartDateUtc)</td>
                             <td>@evt.Location</td>
                             <td><EventStatusBadge State="@evt.GetCurrentState()" /></td>
@@ -190,6 +219,7 @@
     private int totalPages => (int)Math.Ceiling((double)totalCount / pageSize);
 
     private bool showPast = false;
+    private EventType? typeFilter = null;
     private string currentSortColumn = "StartDateUtc";
     private bool ascending = false;
     private bool isLoading = true;
@@ -220,10 +250,11 @@
                 sortColumn: currentSortColumn,
                 ascending: ascending,
                 page: currentPage,
-                pageSize: pageSize
+                pageSize: pageSize,
+                typeFilter: typeFilter
             );
 
-            totalCount = await EventService.GetEventCountAsync(showPast);
+            totalCount = await EventService.GetEventCountAsync(showPast, typeFilter);
         }
         catch (Exception ex)
         {
@@ -261,6 +292,13 @@
 
     private async Task TogglePast()
     {
+        currentPage = 1;
+        await LoadEvents();
+    }
+
+    private async Task SetTypeFilter(EventType? filter)
+    {
+        typeFilter = filter;
         currentPage = 1;
         await LoadEvents();
     }

@@ -294,6 +294,13 @@ else
                 return;
             }
 
+            // Redirect webinar events to detail page (no internal registration form)
+            if (evt.EventType == EventType.Webinar)
+            {
+                NavigationManager.NavigateTo($"/portal/events/{EventId}");
+                return;
+            }
+
             var eventState = evt.GetCurrentState();
             if (eventState != EventState.Public)
             {

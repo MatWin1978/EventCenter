@@ -55,6 +55,12 @@
 
     private RenderFragment GetStatusBadge()
     {
+        // Webinars: no capacity/deadline status — show webinar badge only
+        if (Event.EventType == EventType.Webinar)
+        {
+            return @<span class="badge bg-info"><i class="bi bi-camera-video"></i> Webinar</span>;
+        }
+
         var state = Event.GetCurrentState();
         var registrationCount = Event.GetCurrentRegistrationCount();
 

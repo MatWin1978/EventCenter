@@ -81,6 +81,15 @@ else
                     </div>
                 }
 
+                <!-- Webinar Callout Banner -->
+                @if (evt?.EventType == EventType.Webinar)
+                {
+                    <div class="alert alert-info d-flex align-items-center mb-4">
+                        <i class="bi bi-camera-video me-2 fs-4"></i>
+                        <strong>Dieses Event findet als Webinar statt.</strong>
+                    </div>
+                }
+
                 <!-- Description Section -->
                 <div class="mb-4">
                     <h4>Beschreibung</h4>
@@ -459,52 +468,64 @@ else
                         var isFull = evt.GetCurrentRegistrationCount() >= evt.MaxCapacity;
                     }
 
-                    @if (isUserRegistered)
+                    @if (evt.EventType == EventType.Webinar)
                     {
-                        var userRegName = userRegistration != null
-                            ? userRegistration.FirstName + " " + userRegistration.LastName
-                            : string.Empty;
-                        var userRegId = userRegistration?.Id ?? 0;
-                        <div class="alert alert-success mb-2">
-                            <i class="bi bi-check-circle"></i> Sie sind bereits angemeldet.
-                        </div>
-                        @if (currentState == EventState.Public)
-                        {
-                            <button class="btn btn-outline-danger btn-sm w-100 mb-2"
-                                    @onclick="() => OpenCancelModal(userRegId, userRegName, true)">
-                                <i class="bi bi-x-circle"></i> Anmeldung stornieren
-                            </button>
-                        }
-                        else
-                        {
-                            <div class="text-muted small mb-2">
-                                <i class="bi bi-info-circle"></i> Stornierung nicht möglich (Frist abgelaufen am @TimeZoneHelper.FormatDateTimeCet(DateTime.SpecifyKind(evt!.RegistrationDeadlineUtc, DateTimeKind.Utc), "dd.MM.yyyy"))
-                            </div>
-                        }
-                    }
-                    else if (currentState == EventState.Public && !isFull)
-                    {
-                        <a href="/portal/events/@EventId/register" class="btn btn-primary btn-lg w-100 mb-2">
-                            <i class="bi bi-pencil-square"></i> Jetzt anmelden
+                        <a href="@evt.ExternalRegistrationUrl"
+                           target="_blank"
+                           rel="noopener noreferrer"
+                           class="btn btn-primary btn-lg w-100 mb-2">
+                            <i class="bi bi-box-arrow-up-right"></i> Zur Webinar-Anmeldung
                         </a>
                     }
-                    else if (isFull)
+                    else
                     {
-                        <div class="alert alert-warning">
-                            <i class="bi bi-exclamation-triangle"></i> Veranstaltung ist ausgebucht.
-                        </div>
-                    }
-                    else if (currentState == EventState.DeadlineReached)
-                    {
-                        <div class="alert alert-secondary">
-                            <i class="bi bi-clock-history"></i> Anmeldefrist abgelaufen.
-                        </div>
-                    }
-                    else if (currentState == EventState.Finished)
-                    {
-                        <div class="alert alert-secondary">
-                            <i class="bi bi-calendar-x"></i> Veranstaltung ist beendet.
-                        </div>
+                        @if (isUserRegistered)
+                        {
+                            var userRegName = userRegistration != null
+                                ? userRegistration.FirstName + " " + userRegistration.LastName
+                                : string.Empty;
+                            var userRegId = userRegistration?.Id ?? 0;
+                            <div class="alert alert-success mb-2">
+                                <i class="bi bi-check-circle"></i> Sie sind bereits angemeldet.
+                            </div>
+                            @if (currentState == EventState.Public)
+                            {
+                                <button class="btn btn-outline-danger btn-sm w-100 mb-2"
+                                        @onclick="() => OpenCancelModal(userRegId, userRegName, true)">
+                                    <i class="bi bi-x-circle"></i> Anmeldung stornieren
+                                </button>
+                            }
+                            else
+                            {
+                                <div class="text-muted small mb-2">
+                                    <i class="bi bi-info-circle"></i> Stornierung nicht möglich (Frist abgelaufen am @TimeZoneHelper.FormatDateTimeCet(DateTime.SpecifyKind(evt!.RegistrationDeadlineUtc, DateTimeKind.Utc), "dd.MM.yyyy"))
+                                </div>
+                            }
+                        }
+                        else if (currentState == EventState.Public && !isFull)
+                        {
+                            <a href="/portal/events/@EventId/register" class="btn btn-primary btn-lg w-100 mb-2">
+                                <i class="bi bi-pencil-square"></i> Jetzt anmelden
+                            </a>
+                        }
+                        else if (isFull)
+                        {
+                            <div class="alert alert-warning">
+                                <i class="bi bi-exclamation-triangle"></i> Veranstaltung ist ausgebucht.
+                            </div>
+                        }
+                        else if (currentState == EventState.DeadlineReached)
+                        {
+                            <div class="alert alert-secondary">
+                                <i class="bi bi-clock-history"></i> Anmeldefrist abgelaufen.
+                            </div>
+                        }
+                        else if (currentState == EventState.Finished)
+                        {
+                            <div class="alert alert-secondary">
+                                <i class="bi bi-calendar-x"></i> Veranstaltung ist beendet.
+                            </div>
+                        }
                     }
 
                     <a href="/api/events/@EventId/calendar" class="btn btn-outline-secondary w-100 mb-3">
