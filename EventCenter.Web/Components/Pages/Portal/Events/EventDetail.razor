@@ -4,9 +4,12 @@
 @using EventCenter.Web.Domain.Enums
 @using EventCenter.Web.Domain.Extensions
 @using EventCenter.Web.Infrastructure.Helpers
+@using EventCenter.Web.Models
 @using Microsoft.AspNetCore.Components.Authorization
+@using Blazored.FluentValidation
 @attribute [Authorize(Roles = "Makler")]
 @inject EventService EventService
+@inject RegistrationService RegistrationService
 @inject NavigationManager NavigationManager
 @inject AuthenticationStateProvider AuthStateProvider
 
@@ -172,6 +175,202 @@ else
                         <p class="text-muted">Keine Dokumente vorhanden.</p>
                     }
                 </div>
+
+                <!-- Begleitpersonen Section -->
+                @if (isUserRegistered && evt.MaxCompanions > 0)
+                {
+                    <div class="mb-4">
+                        <div class="card">
+                            <div class="card-header d-flex justify-content-between align-items-center">
+                                <h5 class="mb-0">Begleitpersonen</h5>
+                                <span class="badge bg-primary">@currentGuestCount / @evt.MaxCompanions</span>
+                            </div>
+                            <div class="card-body">
+                                <!-- Success Message -->
+                                @if (!string.IsNullOrWhiteSpace(guestSuccessMessage))
+                                {
+                                    <div class="alert alert-success alert-dismissible fade show" role="alert">
+                                        <i class="bi bi-check-circle"></i> @guestSuccessMessage
+                                        <button type="button" class="btn-close" @onclick="() => guestSuccessMessage = null"></button>
+                                    </div>
+                                }
+
+                                <!-- Error Message -->
+                                @if (!string.IsNullOrWhiteSpace(guestErrorMessage))
+                                {
+                                    <div class="alert alert-danger alert-dismissible fade show" role="alert">
+                                        <i class="bi bi-exclamation-triangle"></i> @guestErrorMessage
+                                        <button type="button" class="btn-close" @onclick="() => guestErrorMessage = null"></button>
+                                    </div>
+                                }
+
+                                <!-- Guest List -->
+                                @if (userGuestRegistrations.Any())
+                                {
+                                    <h6>Meine Begleitpersonen</h6>
+                                    <div class="list-group mb-3">
+                                        @foreach (var guest in userGuestRegistrations)
+                                        {
+                                            var guestCost = guest.RegistrationAgendaItems.Sum(rai => rai.AgendaItem.CostForGuest);
+                                            <div class="list-group-item">
+                                                <div class="d-flex w-100 justify-content-between">
+                                                    <div>
+                                                        <h6 class="mb-1">
+                                                            @if (!string.IsNullOrWhiteSpace(guest.Salutation))
+                                                            {
+                                                                <span>@guest.Salutation</span>
+                                                            }
+                                                            @guest.FirstName @guest.LastName
+                                                        </h6>
+                                                        @if (!string.IsNullOrWhiteSpace(guest.RelationshipType))
+                                                        {
+                                                            <p class="mb-1 text-muted small">@guest.RelationshipType</p>
+                                                        }
+                                                    </div>
+                                                    <div>
+                                                        @if (guestCost > 0)
+                                                        {
+                                                            <span class="badge bg-primary">@guestCost.ToString("N2") EUR</span>
+                                                        }
+                                                        else
+                                                        {
+                                                            <span class="badge bg-success">Kostenfrei</span>
+                                                        }
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        }
+                                    </div>
+                                    <div class="text-end mb-3">
+                                        <strong>Gesamtkosten Begleitpersonen: @totalGuestCost.ToString("N2") EUR</strong>
+                                    </div>
+                                }
+
+                                <!-- Register Guest Button or Limit Warning -->
+                                @if (currentGuestCount >= evt.MaxCompanions)
+                                {
+                                    <div class="alert alert-warning mb-3">
+                                        <i class="bi bi-exclamation-triangle"></i> Maximale Anzahl Begleitpersonen erreicht (@evt.MaxCompanions/@evt.MaxCompanions)
+                                    </div>
+                                }
+                                else if (!showGuestForm)
+                                {
+                                    <button type="button" class="btn btn-primary" @onclick="OpenGuestForm">
+                                        <i class="bi bi-person-plus"></i> Begleitperson anmelden
+                                    </button>
+                                }
+
+                                <!-- Inline Guest Registration Form -->
+                                @if (showGuestForm)
+                                {
+                                    <div class="border p-3 rounded">
+                                        <h6 class="mb-3">Neue Begleitperson anmelden</h6>
+                                        <EditForm Model="guestFormModel" OnValidSubmit="HandleGuestRegistrationAsync">
+                                            <FluentValidationValidator />
+
+                                            <div class="row mb-3">
+                                                <div class="col-md-4">
+                                                    <label class="form-label">Anrede</label>
+                                                    <InputSelect @bind-Value="guestFormModel.Salutation" class="form-select">
+                                                        <option value="">Bitte wählen</option>
+                                                        <option value="Herr">Herr</option>
+                                                        <option value="Frau">Frau</option>
+                                                        <option value="Divers">Divers</option>
+                                                    </InputSelect>
+                                                    <ValidationMessage For="@(() => guestFormModel.Salutation)" />
+                                                </div>
+                                                <div class="col-md-4">
+                                                    <label class="form-label">Vorname *</label>
+                                                    <InputText @bind-Value="guestFormModel.FirstName" class="form-control" />
+                                                    <ValidationMessage For="@(() => guestFormModel.FirstName)" />
+                                                </div>
+                                                <div class="col-md-4">
+                                                    <label class="form-label">Nachname *</label>
+                                                    <InputText @bind-Value="guestFormModel.LastName" class="form-control" />
+                                                    <ValidationMessage For="@(() => guestFormModel.LastName)" />
+                                                </div>
+                                            </div>
+
+                                            <div class="row mb-3">
+                                                <div class="col-md-6">
+                                                    <label class="form-label">E-Mail *</label>
+                                                    <InputText @bind-Value="guestFormModel.Email" type="email" class="form-control" />
+                                                    <ValidationMessage For="@(() => guestFormModel.Email)" />
+                                                </div>
+                                                <div class="col-md-6">
+                                                    <label class="form-label">Beziehungstyp *</label>
+                                                    <InputText @bind-Value="guestFormModel.RelationshipType" class="form-control" placeholder="z.B. Ehepartner, Kollege" />
+                                                    <ValidationMessage For="@(() => guestFormModel.RelationshipType)" />
+                                                </div>
+                                            </div>
+
+                                            <!-- Agenda Items -->
+                                            @{
+                                                var guestAgendaItems = evt.AgendaItems
+                                                    .Where(ai => ai.GuestsCanParticipate)
+                                                    .OrderBy(ai => ai.StartDateTimeUtc)
+                                                    .ToList();
+                                            }
+                                            @if (guestAgendaItems.Any())
+                                            {
+                                                <div class="mb-3">
+                                                    <label class="form-label">Agendapunkte für Begleitperson *</label>
+                                                    <ValidationMessage For="@(() => guestFormModel.SelectedAgendaItemIds)" />
+                                                    @foreach (var item in guestAgendaItems)
+                                                    {
+                                                        var itemId = item.Id;
+                                                        var isSelected = selectedGuestAgendaItemIds.Contains(itemId);
+                                                        var isMandatory = item.IsMandatory;
+
+                                                        <div class="form-check">
+                                                            <input type="checkbox" class="form-check-input"
+                                                                   id="guest-agenda-@itemId"
+                                                                   checked="@(isSelected || isMandatory)"
+                                                                   disabled="@isMandatory"
+                                                                   @onchange="() => ToggleGuestAgendaItem(itemId)" />
+                                                            <label class="form-check-label" for="guest-agenda-@itemId">
+                                                                @item.Title
+                                                                @if (isMandatory)
+                                                                {
+                                                                    <span class="badge bg-warning text-dark ms-2">Pflicht</span>
+                                                                }
+                                                                @if (item.CostForGuest > 0)
+                                                                {
+                                                                    <span class="badge bg-primary ms-2">@item.CostForGuest.ToString("N2") EUR</span>
+                                                                }
+                                                                else
+                                                                {
+                                                                    <span class="badge bg-success ms-2">Kostenfrei</span>
+                                                                }
+                                                            </label>
+                                                        </div>
+                                                    }
+                                                </div>
+                                            }
+
+                                            <!-- Action Buttons -->
+                                            <div class="d-flex justify-content-between align-items-center">
+                                                <button type="button" class="btn btn-secondary" @onclick="CancelGuestForm" disabled="@isSubmittingGuest">
+                                                    Abbrechen
+                                                </button>
+                                                <div>
+                                                    <span class="me-3"><strong>Kosten: @CalculateSelectedGuestCost().ToString("N2") EUR</strong></span>
+                                                    <button type="submit" class="btn btn-primary" disabled="@isSubmittingGuest">
+                                                        @if (isSubmittingGuest)
+                                                        {
+                                                            <span class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>
+                                                        }
+                                                        <i class="bi bi-person-plus"></i> Begleitperson anmelden
+                                                    </button>
+                                                </div>
+                                            </div>
+                                        </EditForm>
+                                    </div>
+                                }
+                            </div>
+                        </div>
+                    </div>
+                }
             </div>
 
             <!-- Sidebar (Right) -->
@@ -285,6 +484,18 @@ else
     private bool isUserRegistered = false;
     private string userEmail = string.Empty;
 
+    // Guest management state
+    private bool showGuestForm = false;
+    private bool isSubmittingGuest = false;
+    private string? guestSuccessMessage;
+    private string? guestErrorMessage;
+    private int currentGuestCount = 0;
+    private decimal totalGuestCost = 0;
+    private List<Registration> userGuestRegistrations = new();
+    private GuestRegistrationFormModel guestFormModel = new();
+    private HashSet<int> selectedGuestAgendaItemIds = new();
+    private int? userBrokerRegistrationId;
+
     protected override async Task OnInitializedAsync()
     {
         try
@@ -309,14 +520,133 @@ else
             // Check if user is already registered
             if (!string.IsNullOrWhiteSpace(userEmail))
             {
-                isUserRegistered = evt.Registrations?.Any(r =>
+                var brokerRegistration = evt.Registrations?.FirstOrDefault(r =>
                     r.Email.Equals(userEmail, StringComparison.OrdinalIgnoreCase) &&
-                    !r.IsCancelled) ?? false;
+                    !r.IsCancelled &&
+                    r.RegistrationType == RegistrationType.Makler);
+
+                if (brokerRegistration != null)
+                {
+                    isUserRegistered = true;
+                    userBrokerRegistrationId = brokerRegistration.Id;
+
+                    // Load guest data
+                    await LoadGuestDataAsync();
+                }
             }
         }
         finally
         {
             isLoading = false;
         }
+    }
+
+    private async Task LoadGuestDataAsync()
+    {
+        if (userBrokerRegistrationId.HasValue)
+        {
+            currentGuestCount = await RegistrationService.GetGuestCountAsync(userBrokerRegistrationId.Value);
+            userGuestRegistrations = await RegistrationService.GetGuestRegistrationsAsync(userBrokerRegistrationId.Value);
+            totalGuestCost = userGuestRegistrations.Sum(g =>
+                g.RegistrationAgendaItems.Sum(rai => rai.AgendaItem.CostForGuest));
+        }
+    }
+
+    private async Task HandleGuestRegistrationAsync()
+    {
+        isSubmittingGuest = true;
+        guestSuccessMessage = null;
+        guestErrorMessage = null;
+
+        try
+        {
+            var result = await RegistrationService.RegisterGuestAsync(
+                userBrokerRegistrationId!.Value,
+                guestFormModel.Salutation!,
+                guestFormModel.FirstName,
+                guestFormModel.LastName,
+                guestFormModel.Email,
+                guestFormModel.RelationshipType!,
+                guestFormModel.SelectedAgendaItemIds);
+
+            if (result.Success)
+            {
+                guestSuccessMessage = "Begleitperson erfolgreich angemeldet.";
+                showGuestForm = false;
+                guestFormModel = new GuestRegistrationFormModel();
+                selectedGuestAgendaItemIds.Clear();
+                await LoadGuestDataAsync();
+            }
+            else
+            {
+                guestErrorMessage = result.ErrorMessage;
+            }
+        }
+        catch (Exception ex)
+        {
+            guestErrorMessage = $"Ein Fehler ist aufgetreten: {ex.Message}";
+        }
+        finally
+        {
+            isSubmittingGuest = false;
+        }
+    }
+
+    private void OpenGuestForm()
+    {
+        showGuestForm = true;
+        guestFormModel = new GuestRegistrationFormModel();
+        selectedGuestAgendaItemIds.Clear();
+        guestSuccessMessage = null;
+        guestErrorMessage = null;
+
+        // Pre-select mandatory items
+        if (evt != null)
+        {
+            var mandatoryItems = evt.AgendaItems
+                .Where(ai => ai.GuestsCanParticipate && ai.IsMandatory)
+                .Select(ai => ai.Id)
+                .ToList();
+
+            foreach (var itemId in mandatoryItems)
+            {
+                selectedGuestAgendaItemIds.Add(itemId);
+            }
+
+            guestFormModel.SelectedAgendaItemIds = selectedGuestAgendaItemIds.ToList();
+        }
+    }
+
+    private void CancelGuestForm()
+    {
+        showGuestForm = false;
+        guestFormModel = new GuestRegistrationFormModel();
+        selectedGuestAgendaItemIds.Clear();
+        guestSuccessMessage = null;
+        guestErrorMessage = null;
+    }
+
+    private void ToggleGuestAgendaItem(int agendaItemId)
+    {
+        if (selectedGuestAgendaItemIds.Contains(agendaItemId))
+        {
+            selectedGuestAgendaItemIds.Remove(agendaItemId);
+        }
+        else
+        {
+            selectedGuestAgendaItemIds.Add(agendaItemId);
+        }
+
+        // Sync to form model
+        guestFormModel.SelectedAgendaItemIds = selectedGuestAgendaItemIds.ToList();
+    }
+
+    private decimal CalculateSelectedGuestCost()
+    {
+        if (evt == null) return 0;
+
+        return evt.AgendaItems
+            .Where(ai => selectedGuestAgendaItemIds.Contains(ai.Id))
+            .Sum(ai => ai.CostForGuest);
     }
 }
