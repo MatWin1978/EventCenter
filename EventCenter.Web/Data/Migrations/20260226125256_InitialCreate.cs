@@ -166,7 +166,7 @@ namespace EventCenter.Web.Data.Migrations
                         column: x => x.RegistrationId,
                         principalTable: "Registrations",
                         principalColumn: "Id",
-                        onDelete: ReferentialAction.Cascade);
+                        onDelete: ReferentialAction.NoAction);
                 });
 
             migrationBuilder.CreateIndex(
