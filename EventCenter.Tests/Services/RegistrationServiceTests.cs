@@ -1,6 +1,7 @@
 using EventCenter.Web.Domain;
 using EventCenter.Web.Domain.Entities;
 using EventCenter.Web.Domain.Enums;
+using EventCenter.Web.Domain.Extensions;
 using EventCenter.Web.Infrastructure.Email;
 using EventCenter.Web.Services;
 using EventCenter.Tests.Helpers;

@@ -325,6 +325,79 @@ public class RegistrationService
     }
 
     /// <summary>
+    /// Cancels a registration (broker's own or a guest registration they created).
+    /// Validates: registration exists, not already cancelled, deadline not passed, caller has permission.
+    /// Per design decision: cancelling broker does NOT cascade to guest registrations.
+    /// </summary>
+    public async Task<(bool Success, string? ErrorMessage)> CancelRegistrationAsync(
+        int registrationId,
+        string cancelledByEmail,
+        string? cancellationReason)
+    {
+        var registration = await _context.Registrations
+            .Include(r => r.Event)
+            .Include(r => r.ParentRegistration)
+            .FirstOrDefaultAsync(r => r.Id == registrationId);
+
+        if (registration == null)
+        {
+            return (false, "Anmeldung nicht gefunden.");
+        }
+
+        if (registration.IsCancelled)
+        {
+            return (false, "Anmeldung ist bereits storniert.");
+        }
+
+        // Check event deadline: only allow cancellation while event is still in Public state
+        var eventState = registration.Event.GetCurrentState();
+        if (eventState != EventState.Public)
+        {
+            return (false, "Stornierung nach Anmeldefrist nicht möglich.");
+        }
+
+        // Permission check: must be own registration or the parent broker of a guest
+        var isOwner = registration.Email.Equals(cancelledByEmail, StringComparison.OrdinalIgnoreCase);
+        var isGuestOwner = registration.ParentRegistration?.Email.Equals(cancelledByEmail, StringComparison.OrdinalIgnoreCase) ?? false;
+
+        if (!isOwner && !isGuestOwner)
+        {
+            return (false, "Keine Berechtigung zum Stornieren dieser Anmeldung.");
+        }
+
+        // Soft delete: mark as cancelled with timestamp and reason
+        registration.IsCancelled = true;
+        registration.CancellationDateUtc = DateTime.UtcNow;
+        registration.CancellationReason = cancellationReason;
+
+        await _context.SaveChangesAsync();
+
+        // NOTE: Per locked user decision, we do NOT cascade cancellation to guest registrations.
+        // Only this specific registration is cancelled.
+
+        // Send cancellation emails (fire-and-forget with error handling)
+        var capturedRegistrationId = registrationId;
+        _ = Task.Run(async () =>
+        {
+            try
+            {
+                var registrationWithDetails = await GetRegistrationWithDetailsAsync(capturedRegistrationId);
+                if (registrationWithDetails != null)
+                {
+                    await _emailSender.SendMaklerCancellationConfirmationAsync(registrationWithDetails);
+                    await _emailSender.SendAdminMaklerCancellationNotificationAsync(registrationWithDetails);
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Failed to send cancellation emails for registration {RegistrationId}", capturedRegistrationId);
+            }
+        });
+
+        return (true, null);
+    }
+
+    /// <summary>
     /// Gets all guest registrations for a broker with agenda item details.
     /// </summary>
     public async Task<List<Registration>> GetGuestRegistrationsAsync(int brokerRegistrationId)

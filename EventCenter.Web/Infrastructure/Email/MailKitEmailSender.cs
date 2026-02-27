@@ -514,6 +514,212 @@ public class MailKitEmailSender : IEmailSender
 </html>";
     }
 
+    public async Task SendMaklerCancellationConfirmationAsync(Registration registration)
+    {
+        try
+        {
+            var message = new MimeMessage();
+            message.From.Add(new MailboxAddress(_settings.SenderName, _settings.SenderEmail));
+            message.To.Add(new MailboxAddress($"{registration.FirstName} {registration.LastName}", registration.Email));
+            message.Subject = $"Stornierungsbestätigung - {registration.Event.Title}";
+
+            var htmlBody = BuildMaklerCancellationConfirmationHtmlBody(registration);
+            message.Body = new TextPart("html") { Text = htmlBody };
+
+            using var client = new SmtpClient();
+            await client.ConnectAsync(_settings.Host, _settings.Port, _settings.UseSsl);
+
+            if (!string.IsNullOrEmpty(_settings.Username))
+            {
+                await client.AuthenticateAsync(_settings.Username, _settings.Password);
+            }
+
+            await client.SendAsync(message);
+            await client.DisconnectAsync(true);
+
+            _logger.LogInformation(
+                "Successfully sent cancellation confirmation email to {Email} for registration {RegistrationId}",
+                registration.Email,
+                registration.Id);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex,
+                "Failed to send cancellation confirmation email to {Email} for registration {RegistrationId}",
+                registration.Email,
+                registration.Id);
+            throw;
+        }
+    }
+
+    public async Task SendAdminMaklerCancellationNotificationAsync(Registration registration)
+    {
+        try
+        {
+            var adminEmail = Environment.GetEnvironmentVariable("AdminNotificationEmail")
+                ?? registration.Event.ContactEmail
+                ?? "admin@example.com";
+
+            var message = new MimeMessage();
+            message.From.Add(new MailboxAddress(_settings.SenderName, _settings.SenderEmail));
+            message.To.Add(new MailboxAddress("Administrator", adminEmail));
+            message.Subject = $"Stornierung - {registration.FirstName} {registration.LastName} - {registration.Event.Title}";
+
+            var htmlBody = BuildAdminMaklerCancellationNotificationHtmlBody(registration);
+            message.Body = new TextPart("html") { Text = htmlBody };
+
+            using var client = new SmtpClient();
+            await client.ConnectAsync(_settings.Host, _settings.Port, _settings.UseSsl);
+
+            if (!string.IsNullOrEmpty(_settings.Username))
+            {
+                await client.AuthenticateAsync(_settings.Username, _settings.Password);
+            }
+
+            await client.SendAsync(message);
+            await client.DisconnectAsync(true);
+
+            _logger.LogInformation(
+                "Successfully sent admin cancellation notification for registration {RegistrationId} and event {EventId}",
+                registration.Id,
+                registration.EventId);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex,
+                "Failed to send admin cancellation notification for registration {RegistrationId} and event {EventId}",
+                registration.Id,
+                registration.EventId);
+            throw;
+        }
+    }
+
+    private string BuildMaklerCancellationConfirmationHtmlBody(Registration registration)
+    {
+        var evt = registration.Event;
+        var startDate = TimeZoneHelper.FormatDateTimeCet(evt.StartDateUtc, "dd.MM.yyyy HH:mm");
+        var endDate = TimeZoneHelper.FormatDateTimeCet(evt.EndDateUtc, "dd.MM.yyyy HH:mm");
+        var cancellationDate = registration.CancellationDateUtc.HasValue
+            ? TimeZoneHelper.FormatDateTimeCet(registration.CancellationDateUtc.Value, "dd.MM.yyyy HH:mm")
+            : "-";
+
+        var reasonHtml = string.Empty;
+        if (!string.IsNullOrWhiteSpace(registration.CancellationReason))
+        {
+            reasonHtml = $@"
+        <div style=""background-color: #f8f9fa; padding: 15px; margin: 20px 0; border-radius: 5px; border-left: 4px solid #dc3545;"">
+            <h3 style=""margin-top: 0; color: #333;"">Stornierungsgrund:</h3>
+            <p style=""margin: 0; font-style: italic;"">{registration.CancellationReason.Replace("\n", "<br/>")}</p>
+        </div>";
+        }
+
+        return $@"
+<!DOCTYPE html>
+<html lang=""de"">
+<head>
+    <meta charset=""UTF-8"">
+    <meta name=""viewport"" content=""width=device-width, initial-scale=1.0"">
+    <title>Stornierungsbestätigung</title>
+</head>
+<body style=""font-family: Arial, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px;"">
+    <div style=""background-color: #dc3545; color: white; padding: 20px; text-align: center; border-radius: 5px 5px 0 0;"">
+        <h1 style=""margin: 0;"">Stornierungsbestätigung</h1>
+    </div>
+
+    <div style=""background-color: #ffffff; padding: 20px; border: 1px solid #dee2e6; border-radius: 0 0 5px 5px;"">
+        <p>Sehr geehrte(r) {registration.FirstName} {registration.LastName},</p>
+
+        <p>Ihre Anmeldung wurde erfolgreich storniert:</p>
+
+        <div style=""background-color: #f8f9fa; padding: 15px; margin: 20px 0; border-radius: 5px;"">
+            <h2 style=""color: #007bff; margin-top: 0;"">{evt.Title}</h2>
+            <p style=""margin: 5px 0;""><strong>Datum:</strong> {startDate} - {endDate}</p>
+            <p style=""margin: 5px 0;""><strong>Ort:</strong> {evt.Location}</p>
+            <p style=""margin: 5px 0;""><strong>Storniert am:</strong> {cancellationDate} Uhr</p>
+        </div>
+
+        {reasonHtml}
+
+        <p>Sollten noch Plätze verfügbar sein, ist eine erneute Anmeldung möglich.</p>
+
+        <hr style=""border: none; border-top: 1px solid #dee2e6; margin: 30px 0;""/>
+
+        <p style=""color: #666; font-size: 12px; text-align: center;"">
+            Bei Fragen wenden Sie sich bitte an: {_settings.SenderEmail}
+        </p>
+    </div>
+</body>
+</html>";
+    }
+
+    private string BuildAdminMaklerCancellationNotificationHtmlBody(Registration registration)
+    {
+        var evt = registration.Event;
+        var startDate = TimeZoneHelper.FormatDateTimeCet(evt.StartDateUtc, "dd.MM.yyyy HH:mm");
+        var endDate = TimeZoneHelper.FormatDateTimeCet(evt.EndDateUtc, "dd.MM.yyyy HH:mm");
+        var cancellationDate = registration.CancellationDateUtc.HasValue
+            ? TimeZoneHelper.FormatDateTimeCet(registration.CancellationDateUtc.Value, "dd.MM.yyyy HH:mm")
+            : "-";
+        var registrationType = registration.RegistrationType == Domain.Enums.RegistrationType.Guest ? "Begleitperson" : "Makler";
+
+        var reasonHtml = string.Empty;
+        if (!string.IsNullOrWhiteSpace(registration.CancellationReason))
+        {
+            reasonHtml = $@"
+        <div style=""background-color: #f8f9fa; padding: 15px; margin: 20px 0; border-radius: 5px; border-left: 4px solid #dc3545;"">
+            <h3 style=""margin-top: 0; color: #333;"">Stornierungsgrund:</h3>
+            <p style=""margin: 0; font-style: italic;"">{registration.CancellationReason.Replace("\n", "<br/>")}</p>
+        </div>";
+        }
+
+        return $@"
+<!DOCTYPE html>
+<html lang=""de"">
+<head>
+    <meta charset=""UTF-8"">
+    <meta name=""viewport"" content=""width=device-width, initial-scale=1.0"">
+    <title>Stornierungsmeldung</title>
+</head>
+<body style=""font-family: Arial, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px;"">
+    <div style=""background-color: #dc3545; color: white; padding: 20px; text-align: center; border-radius: 5px 5px 0 0;"">
+        <h1 style=""margin: 0;"">Stornierung einer Makler-Anmeldung</h1>
+    </div>
+
+    <div style=""background-color: #ffffff; padding: 20px; border: 1px solid #dee2e6; border-radius: 0 0 5px 5px;"">
+        <p>Eine Makler-Anmeldung wurde storniert:</p>
+
+        <div style=""background-color: #f8f9fa; padding: 15px; margin: 20px 0; border-radius: 5px;"">
+            <h2 style=""color: #007bff; margin-top: 0;"">{evt.Title}</h2>
+            <p style=""margin: 5px 0;""><strong>Datum:</strong> {startDate} - {endDate}</p>
+            <p style=""margin: 5px 0;""><strong>Ort:</strong> {evt.Location}</p>
+        </div>
+
+        <div style=""background-color: #e9ecef; padding: 15px; margin: 20px 0; border-radius: 5px;"">
+            <h3 style=""margin-top: 0; color: #333;"">Angaben zur Anmeldung</h3>
+            <p style=""margin: 5px 0;""><strong>Name:</strong> {registration.FirstName} {registration.LastName}</p>
+            <p style=""margin: 5px 0;""><strong>E-Mail:</strong> {registration.Email}</p>
+            <p style=""margin: 5px 0;""><strong>Anmeldetyp:</strong> {registrationType}</p>
+            <p style=""margin: 5px 0;""><strong>Storniert am:</strong> {cancellationDate} Uhr</p>
+        </div>
+
+        {reasonHtml}
+
+        <div style=""text-align: center; margin: 30px 0;"">
+            <a href=""https://example.com/admin/events/{evt.Id}/registrations"" style=""display: inline-block; background-color: #dc3545; color: white; padding: 15px 30px; text-decoration: none; border-radius: 5px; font-weight: bold;"">
+                Zur Anmeldungsverwaltung
+            </a>
+        </div>
+
+        <hr style=""border: none; border-top: 1px solid #dee2e6; margin: 30px 0;""/>
+
+        <p style=""color: #666; font-size: 12px; text-align: center;"">
+            Diese E-Mail wurde automatisch generiert.
+        </p>
+    </div>
+</body>
+</html>";
+    }
+
     public async Task SendGuestRegistrationConfirmationAsync(Registration guestRegistration, Registration brokerRegistration)
     {
         try
