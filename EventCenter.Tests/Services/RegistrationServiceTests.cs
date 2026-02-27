@@ -512,6 +512,7 @@ public class RegistrationServiceTests : IDisposable
             EndDateTimeUtc = evt.StartDateUtc.AddHours(1),
             CostForMakler = 50.00m,
             CostForGuest = 30.00m,
+            MaklerCanParticipate = true,
             GuestsCanParticipate = true
         };
         _context.AgendaItems.Add(agendaItem);

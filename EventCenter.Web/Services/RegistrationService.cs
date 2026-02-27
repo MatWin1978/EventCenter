@@ -196,12 +196,20 @@ public class RegistrationService
             var brokerRegistration = await _context.Registrations
                 .Include(r => r.Event)
                     .ThenInclude(e => e.AgendaItems)
-                .Include(r => r.Event.Registrations)
                 .FirstOrDefaultAsync(r => r.Id == brokerRegistrationId);
 
             if (brokerRegistration == null)
             {
                 return (false, null, "Makler-Anmeldung nicht gefunden.");
+            }
+
+            // Load event registrations separately
+            var evt = brokerRegistration.Event;
+            if (evt != null)
+            {
+                await _context.Entry(evt)
+                    .Collection(e => e.Registrations)
+                    .LoadAsync();
             }
 
             // Verify broker registration is not cancelled
@@ -216,10 +224,8 @@ public class RegistrationService
                 return (false, null, "Nur Makler können Begleitpersonen anmelden.");
             }
 
-            var evt = brokerRegistration.Event;
-
             // Validate event state
-            var eventState = evt.GetCurrentState();
+            var eventState = evt!.GetCurrentState();
             if (eventState != EventState.Public)
             {
                 return (false, null, "Anmeldung nicht möglich - Frist abgelaufen.");
