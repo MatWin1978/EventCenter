@@ -123,7 +123,7 @@ Plans:
 **Success Criteria** (what must be TRUE):
   1. Makler can register a guest (companion) for an event they are attending
   2. System enforces companion limit per broker (MaxCompanions validation)
-  3. Makler provides all required guest details (salutation, name, address, relationship type)
+  3. Makler provides all required guest details (salutation, name, email, relationship type)
   4. Makler receives confirmation email after guest registration
   5. Guest registrations display correct costs based on CompanionParticipationCost
 **Plans**: 2 plans

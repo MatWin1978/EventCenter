@@ -73,7 +73,7 @@
 
 - [ ] **GREG-01**: Makler kann Begleitperson für Veranstaltung anmelden (US-17)
 - [ ] **GREG-02**: System prüft Begleitpersonenlimit pro Makler
-- [ ] **GREG-03**: Makler gibt Gast-Daten ein (Anrede, Name, Adresse, Beziehungstyp)
+- [ ] **GREG-03**: Makler gibt Gast-Daten ein (Anrede, Name, E-Mail, Beziehungstyp)
 
 ### Stornierung (Makler)
 

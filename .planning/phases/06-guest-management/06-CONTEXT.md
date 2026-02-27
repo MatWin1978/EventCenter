@@ -39,6 +39,11 @@ Brokers can register companions (guests) for events they're attending, with limi
 - If MaxCompanions = 0: guest section hidden entirely — no guest-related UI shown
 - If broker not registered: guest section hidden entirely
 
+### Email notification (MAIL-02)
+- Per MAIL-02: "System sendet Bestätigung an Makler nach Gastanmeldung" — the guest registration confirmation email is sent TO the broker (not to the guest)
+- The broker is the recipient so they are notified that a guest was successfully registered under their registration
+- The email body includes the guest's details (name, salutation, agenda items, costs) so the broker has a record of the registration
+
 ### Claude's Discretion
 - Exact form layout and field ordering
 - Success message styling (toast vs inline alert)
