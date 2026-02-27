@@ -126,10 +126,11 @@ Plans:
   3. Makler provides all required guest details (salutation, name, address, relationship type)
   4. Makler receives confirmation email after guest registration
   5. Guest registrations display correct costs based on CompanionParticipationCost
-**Plans**: TBD
+**Plans**: 2 plans
 
 Plans:
-- [ ] TBD after phase planning
+- [ ] 06-01-PLAN.md — Domain model extensions, guest registration service methods, email template, and tests
+- [ ] 06-02-PLAN.md — EventDetail page guest registration section with inline form, guest list, and limit enforcement
 
 ### Phase 7: Cancellation & Participant Management
 **Goal**: Users can cancel registrations and admins can view/export participant data
@@ -174,6 +175,6 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6 → 7 → 8
 | 3. Makler Event Discovery & Registration | 3/5 | In Progress|  |
 | 4. Company Invitations | 0/3 | Not started | - |
 | 5. Company Booking Portal | 0/TBD | Not started | - |
-| 6. Guest Management | 0/TBD | Not started | - |
+| 6. Guest Management | 0/2 | Not started | - |
 | 7. Cancellation & Participant Management | 0/TBD | Not started | - |
 | 8. Webinar Support | 0/TBD | Not started | - |
