@@ -3,12 +3,12 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: unknown
-last_updated: "2026-02-27T09:43:32.779Z"
+last_updated: "2026-02-27T11:06:18.020Z"
 progress:
-  total_phases: 4
+  total_phases: 5
   completed_phases: 4
-  total_plans: 16
-  completed_plans: 16
+  total_plans: 19
+  completed_plans: 17
 ---
 
 # Project State
@@ -18,23 +18,23 @@ progress:
 See: .planning/PROJECT.md (updated 2026-02-26)
 
 **Core value:** Makler und eingeladene Firmen können sich reibungslos für Veranstaltungen anmelden, Agendapunkte auswählen und ihre Teilnahme verwalten.
-**Current focus:** Phase 4 - Company Invitations
+**Current focus:** Phase 5 - Company Booking Portal
 
 ## Current Position
 
-Phase: 4 of 8 (Company Invitations)
-Plan: 3 of 3
-Status: Complete
-Last activity: 2026-02-27 - Completed plan 04-03 (Admin Company Invitation UI)
+Phase: 5 of 8 (Company Booking Portal)
+Plan: 1 of 3
+Status: In Progress
+Last activity: 2026-02-27 - Completed plan 05-01 (Foundation Layer)
 
-Progress: [████░░░░░░] 50.0% (4/8 phases, 16/16 plans completed)
+Progress: [█████░░░░░] 52.6% (4/8 phases, 17/19 plans completed)
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 16
-- Average duration: 5.5 minutes
-- Total execution time: 1.47 hours
+- Total plans completed: 17
+- Average duration: 5.3 minutes
+- Total execution time: 1.52 hours
 
 **By Phase:**
 
@@ -44,16 +44,17 @@ Progress: [████░░░░░░] 50.0% (4/8 phases, 16/16 plans comple
 | 02 | 4 | 2011s | 502.8s |
 | 03 | 5 | 1402s | 280.4s |
 | 04 | 3 | 1094s | 364.7s |
+| 05 | 1 | 179s | 179.0s |
 
 **Recent Plans:**
 
 | Phase-Plan | Duration | Tasks | Files | Date |
 |------------|----------|-------|-------|------|
+| 05-01 | 179s (3.0m) | 3 | 7 | 2026-02-27 |
 | 04-03 | 318s (5.3m) | 3 | 2 | 2026-02-27 |
 | 04-02 | 518s (8.6m) | 1 | 6 | 2026-02-27 |
 | 04-01 | 258s (4.3m) | 2 | 11 | 2026-02-27 |
 | 03-05 | 269s (4.5m) | 3 | 3 | 2026-02-26 |
-| 03-04 | 169s (2.8m) | 2 | 2 | 2026-02-26 |
 
 ## Accumulated Context
 
@@ -119,6 +120,8 @@ Recent decisions affecting current work:
 - [Phase 04-03]: Email preview section collapsible with iframe/sanitized HTML rendering
 - [Phase 04-03]: Save as draft vs Create & Send action buttons for flexible workflow
 - [Phase 04-03]: Batch mode uses standard pricing with optional shared percentage discount
+- [Phase 05]: Added CancellationComment, BookingDateUtc, and IsNonParticipation fields to EventCompany for booking management
+- [Phase 05]: Rate limit of 10 requests per minute with zero queue for company booking endpoint
 
 ### Pending Todos
 
@@ -137,5 +140,5 @@ None yet.
 ## Session Continuity
 
 Last session: 2026-02-27
-Stopped at: Completed 04-03-PLAN.md execution
-Resume file: .planning/phases/04-company-invitations/04-03-SUMMARY.md
+Stopped at: Completed 05-01-PLAN.md execution
+Resume file: .planning/phases/05-company-booking-portal/05-01-SUMMARY.md

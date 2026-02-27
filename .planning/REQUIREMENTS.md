@@ -9,7 +9,7 @@
 
 - [x] **AUTH-01**: Admin kann sich via Keycloak im Backoffice anmelden
 - [x] **AUTH-02**: Makler kann sich via Keycloak im Portal anmelden
-- [ ] **AUTH-03**: Unternehmensvertreter kann per GUID-Link ohne Login auf Firmenbuchung zugreifen
+- [x] **AUTH-03**: Unternehmensvertreter kann per GUID-Link ohne Login auf Firmenbuchung zugreifen
 
 ### Veranstaltungsverwaltung (Admin)
 
@@ -86,9 +86,9 @@
 
 - [ ] **CBOK-01**: Unternehmensvertreter sieht Buchungsseite per GUID-Link (US-20)
 - [ ] **CBOK-02**: Unternehmensvertreter sieht firmenspezifische Preise und Agendapunkte
-- [ ] **CBOK-03**: Unternehmensvertreter kann beliebig viele Teilnehmer eintragen (US-21)
+- [x] **CBOK-03**: Unternehmensvertreter kann beliebig viele Teilnehmer eintragen (US-21)
 - [ ] **CBOK-04**: Unternehmensvertreter kann Zusatzoptionen auswählen (US-21)
-- [ ] **CBOK-05**: System berechnet Kosten automatisch (Fixpreis + Zusatzteilnehmer)
+- [x] **CBOK-05**: System berechnet Kosten automatisch (Fixpreis + Zusatzteilnehmer)
 - [ ] **CBOK-06**: Unternehmensvertreter kann Buchung absenden und erhält Bestätigung
 - [ ] **CBOK-07**: Unternehmensvertreter kann Buchung stornieren (US-22)
 - [ ] **CBOK-08**: Unternehmensvertreter kann Nicht-Teilnahme melden (US-23)
@@ -98,8 +98,8 @@
 - [x] **MAIL-01**: System sendet Bestätigung an Makler nach Selbstanmeldung
 - [ ] **MAIL-02**: System sendet Bestätigung an Makler nach Gastanmeldung
 - [x] **MAIL-03**: System sendet Einladung an Firma mit GUID-Link
-- [ ] **MAIL-04**: System sendet Benachrichtigung an Admin nach Firmenbuchung
-- [ ] **MAIL-05**: System sendet Benachrichtigung an Admin nach Firmenstorno
+- [x] **MAIL-04**: System sendet Benachrichtigung an Admin nach Firmenbuchung
+- [x] **MAIL-05**: System sendet Benachrichtigung an Admin nach Firmenstorno
 
 ## v2 Requirements
 
@@ -128,7 +128,7 @@
 |-------------|-------|--------|
 | AUTH-01 | Phase 1 | Complete |
 | AUTH-02 | Phase 1 | Complete |
-| AUTH-03 | Phase 5 | Pending |
+| AUTH-03 | Phase 5 | Complete |
 | EVNT-01 | Phase 2 | Complete |
 | EVNT-02 | Phase 2 | Complete |
 | EVNT-03 | Phase 2 | Complete |
@@ -169,17 +169,17 @@
 | MCAN-04 | Phase 7 | Pending |
 | CBOK-01 | Phase 5 | Pending |
 | CBOK-02 | Phase 5 | Pending |
-| CBOK-03 | Phase 5 | Pending |
+| CBOK-03 | Phase 5 | Complete |
 | CBOK-04 | Phase 5 | Pending |
-| CBOK-05 | Phase 5 | Pending |
+| CBOK-05 | Phase 5 | Complete |
 | CBOK-06 | Phase 5 | Pending |
 | CBOK-07 | Phase 5 | Pending |
 | CBOK-08 | Phase 5 | Pending |
 | MAIL-01 | Phase 3 | Complete (03-01) |
 | MAIL-02 | Phase 6 | Pending |
 | MAIL-03 | Phase 4 | Complete |
-| MAIL-04 | Phase 5 | Pending |
-| MAIL-05 | Phase 5 | Pending |
+| MAIL-04 | Phase 5 | Complete |
+| MAIL-05 | Phase 5 | Complete |
 
 **Coverage:**
 - v1 requirements: 52 total
