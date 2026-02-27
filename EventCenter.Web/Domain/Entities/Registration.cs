@@ -19,6 +19,7 @@ public class Registration
     public string? SpecialRequirements { get; set; }
     public bool IsCancelled { get; set; }
     public DateTime? CancellationDateUtc { get; set; }
+    public string? CancellationReason { get; set; }
 
     // Guest-specific fields (Phase 6)
     public int? ParentRegistrationId { get; set; }  // NULL for broker/company, FK to broker's registration for guest

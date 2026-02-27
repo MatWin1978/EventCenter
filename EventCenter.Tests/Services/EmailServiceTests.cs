@@ -47,6 +47,16 @@ public class TestEmailSender : IEmailSender
         SentGuestConfirmations.Add((guestRegistration, brokerRegistration));
         return Task.CompletedTask;
     }
+
+    public Task SendMaklerCancellationConfirmationAsync(Registration registration)
+    {
+        return Task.CompletedTask;
+    }
+
+    public Task SendAdminMaklerCancellationNotificationAsync(Registration registration)
+    {
+        return Task.CompletedTask;
+    }
 }
 
 public class EmailServiceTests

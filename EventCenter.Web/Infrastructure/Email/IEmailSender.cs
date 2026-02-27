@@ -10,4 +10,6 @@ public interface IEmailSender
     Task SendAdminBookingNotificationAsync(EventCompany company, Event evt, List<ParticipantModel> participants);
     Task SendAdminCancellationNotificationAsync(EventCompany company, Event evt, string? cancellationComment, bool isNonParticipation);
     Task SendGuestRegistrationConfirmationAsync(Registration guestRegistration, Registration brokerRegistration);
+    Task SendMaklerCancellationConfirmationAsync(Registration registration);
+    Task SendAdminMaklerCancellationNotificationAsync(Registration registration);
 }

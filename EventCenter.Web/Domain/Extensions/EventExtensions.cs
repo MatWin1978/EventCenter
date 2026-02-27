@@ -28,6 +28,6 @@ public static class EventExtensions
 
     public static int GetCurrentRegistrationCount(this Event evt)
     {
-        return evt.Registrations?.Count ?? 0;
+        return evt.Registrations?.Count(r => !r.IsCancelled) ?? 0;
     }
 }

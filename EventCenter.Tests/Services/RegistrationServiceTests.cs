@@ -1022,6 +1022,377 @@ public class RegistrationServiceTests : IDisposable
     }
 
     [Fact]
+    public async Task CancelRegistration_OwnRegistration_ReturnsSuccess()
+    {
+        // Arrange
+        var evt = new Event
+        {
+            Title = "Test Event",
+            Location = "Test Location",
+            StartDateUtc = DateTime.SpecifyKind(DateTime.UtcNow.AddDays(7), DateTimeKind.Utc),
+            EndDateUtc = DateTime.SpecifyKind(DateTime.UtcNow.AddDays(8), DateTimeKind.Utc),
+            RegistrationDeadlineUtc = DateTime.SpecifyKind(DateTime.UtcNow.AddDays(5), DateTimeKind.Utc),
+            MaxCapacity = 10,
+            MaxCompanions = 2,
+            IsPublished = true
+        };
+        _context.Events.Add(evt);
+        await _context.SaveChangesAsync();
+
+        var registration = new Registration
+        {
+            EventId = evt.Id,
+            RegistrationType = RegistrationType.Makler,
+            FirstName = "Max",
+            LastName = "Mustermann",
+            Email = "makler@example.com",
+            RegistrationDateUtc = DateTime.UtcNow,
+            IsConfirmed = true,
+            IsCancelled = false
+        };
+        _context.Registrations.Add(registration);
+        await _context.SaveChangesAsync();
+
+        // Act
+        var result = await _service.CancelRegistrationAsync(registration.Id, "makler@example.com", "Termin kollidiert");
+
+        // Assert
+        Assert.True(result.Success);
+        Assert.Null(result.ErrorMessage);
+
+        var updated = await _context.Registrations.FindAsync(registration.Id);
+        Assert.NotNull(updated);
+        Assert.True(updated.IsCancelled);
+        Assert.NotNull(updated.CancellationDateUtc);
+        Assert.Equal("Termin kollidiert", updated.CancellationReason);
+    }
+
+    [Fact]
+    public async Task CancelRegistration_GuestRegistration_ByBroker_ReturnsSuccess()
+    {
+        // Arrange
+        var evt = new Event
+        {
+            Title = "Test Event",
+            Location = "Test Location",
+            StartDateUtc = DateTime.SpecifyKind(DateTime.UtcNow.AddDays(7), DateTimeKind.Utc),
+            EndDateUtc = DateTime.SpecifyKind(DateTime.UtcNow.AddDays(8), DateTimeKind.Utc),
+            RegistrationDeadlineUtc = DateTime.SpecifyKind(DateTime.UtcNow.AddDays(5), DateTimeKind.Utc),
+            MaxCapacity = 10,
+            MaxCompanions = 2,
+            IsPublished = true
+        };
+        _context.Events.Add(evt);
+        await _context.SaveChangesAsync();
+
+        var brokerRegistration = new Registration
+        {
+            EventId = evt.Id,
+            RegistrationType = RegistrationType.Makler,
+            FirstName = "Max",
+            LastName = "Broker",
+            Email = "broker@example.com",
+            RegistrationDateUtc = DateTime.UtcNow,
+            IsConfirmed = true,
+            IsCancelled = false
+        };
+        _context.Registrations.Add(brokerRegistration);
+        await _context.SaveChangesAsync();
+
+        var guestRegistration = new Registration
+        {
+            EventId = evt.Id,
+            ParentRegistrationId = brokerRegistration.Id,
+            RegistrationType = RegistrationType.Guest,
+            FirstName = "Anna",
+            LastName = "Guest",
+            Email = "guest@example.com",
+            RegistrationDateUtc = DateTime.UtcNow,
+            IsConfirmed = true,
+            IsCancelled = false
+        };
+        _context.Registrations.Add(guestRegistration);
+        await _context.SaveChangesAsync();
+
+        // Act - cancel guest using broker's email
+        var result = await _service.CancelRegistrationAsync(guestRegistration.Id, "broker@example.com", null);
+
+        // Assert
+        Assert.True(result.Success, $"Expected success but got error: {result.ErrorMessage}");
+        Assert.Null(result.ErrorMessage);
+
+        var updated = await _context.Registrations.FindAsync(guestRegistration.Id);
+        Assert.NotNull(updated);
+        Assert.True(updated.IsCancelled);
+    }
+
+    [Fact]
+    public async Task CancelRegistration_NotOwner_ReturnsError()
+    {
+        // Arrange
+        var evt = new Event
+        {
+            Title = "Test Event",
+            Location = "Test Location",
+            StartDateUtc = DateTime.SpecifyKind(DateTime.UtcNow.AddDays(7), DateTimeKind.Utc),
+            EndDateUtc = DateTime.SpecifyKind(DateTime.UtcNow.AddDays(8), DateTimeKind.Utc),
+            RegistrationDeadlineUtc = DateTime.SpecifyKind(DateTime.UtcNow.AddDays(5), DateTimeKind.Utc),
+            MaxCapacity = 10,
+            MaxCompanions = 2,
+            IsPublished = true
+        };
+        _context.Events.Add(evt);
+        await _context.SaveChangesAsync();
+
+        var registration = new Registration
+        {
+            EventId = evt.Id,
+            RegistrationType = RegistrationType.Makler,
+            FirstName = "Max",
+            LastName = "Mustermann",
+            Email = "owner@example.com",
+            RegistrationDateUtc = DateTime.UtcNow,
+            IsConfirmed = true,
+            IsCancelled = false
+        };
+        _context.Registrations.Add(registration);
+        await _context.SaveChangesAsync();
+
+        // Act - try to cancel with different email
+        var result = await _service.CancelRegistrationAsync(registration.Id, "other@example.com", null);
+
+        // Assert
+        Assert.False(result.Success);
+        Assert.Equal("Keine Berechtigung zum Stornieren dieser Anmeldung.", result.ErrorMessage);
+    }
+
+    [Fact]
+    public async Task CancelRegistration_DeadlinePassed_ReturnsError()
+    {
+        // Arrange
+        var evt = new Event
+        {
+            Title = "Test Event",
+            Location = "Test Location",
+            StartDateUtc = DateTime.SpecifyKind(DateTime.UtcNow.AddDays(7), DateTimeKind.Utc),
+            EndDateUtc = DateTime.SpecifyKind(DateTime.UtcNow.AddDays(8), DateTimeKind.Utc),
+            RegistrationDeadlineUtc = DateTime.SpecifyKind(DateTime.UtcNow.AddDays(-3), DateTimeKind.Utc),
+            MaxCapacity = 10,
+            MaxCompanions = 2,
+            IsPublished = true
+        };
+        _context.Events.Add(evt);
+        await _context.SaveChangesAsync();
+
+        var registration = new Registration
+        {
+            EventId = evt.Id,
+            RegistrationType = RegistrationType.Makler,
+            FirstName = "Max",
+            LastName = "Mustermann",
+            Email = "makler@example.com",
+            RegistrationDateUtc = DateTime.UtcNow.AddDays(-5),
+            IsConfirmed = true,
+            IsCancelled = false
+        };
+        _context.Registrations.Add(registration);
+        await _context.SaveChangesAsync();
+
+        // Act
+        var result = await _service.CancelRegistrationAsync(registration.Id, "makler@example.com", null);
+
+        // Assert
+        Assert.False(result.Success);
+        Assert.Equal("Stornierung nach Anmeldefrist nicht möglich.", result.ErrorMessage);
+    }
+
+    [Fact]
+    public async Task CancelRegistration_AlreadyCancelled_ReturnsError()
+    {
+        // Arrange
+        var evt = new Event
+        {
+            Title = "Test Event",
+            Location = "Test Location",
+            StartDateUtc = DateTime.SpecifyKind(DateTime.UtcNow.AddDays(7), DateTimeKind.Utc),
+            EndDateUtc = DateTime.SpecifyKind(DateTime.UtcNow.AddDays(8), DateTimeKind.Utc),
+            RegistrationDeadlineUtc = DateTime.SpecifyKind(DateTime.UtcNow.AddDays(5), DateTimeKind.Utc),
+            MaxCapacity = 10,
+            MaxCompanions = 2,
+            IsPublished = true
+        };
+        _context.Events.Add(evt);
+        await _context.SaveChangesAsync();
+
+        var registration = new Registration
+        {
+            EventId = evt.Id,
+            RegistrationType = RegistrationType.Makler,
+            FirstName = "Max",
+            LastName = "Mustermann",
+            Email = "makler@example.com",
+            RegistrationDateUtc = DateTime.UtcNow,
+            IsConfirmed = true,
+            IsCancelled = true,
+            CancellationDateUtc = DateTime.UtcNow.AddDays(-1)
+        };
+        _context.Registrations.Add(registration);
+        await _context.SaveChangesAsync();
+
+        // Act
+        var result = await _service.CancelRegistrationAsync(registration.Id, "makler@example.com", null);
+
+        // Assert
+        Assert.False(result.Success);
+        Assert.Equal("Anmeldung ist bereits storniert.", result.ErrorMessage);
+    }
+
+    [Fact]
+    public async Task CancelRegistration_NotFound_ReturnsError()
+    {
+        // Act
+        var result = await _service.CancelRegistrationAsync(99999, "any@example.com", null);
+
+        // Assert
+        Assert.False(result.Success);
+        Assert.Equal("Anmeldung nicht gefunden.", result.ErrorMessage);
+    }
+
+    [Fact]
+    public async Task CancelRegistration_DoesNotCancelGuestRegistrations()
+    {
+        // Arrange
+        var evt = new Event
+        {
+            Title = "Test Event",
+            Location = "Test Location",
+            StartDateUtc = DateTime.SpecifyKind(DateTime.UtcNow.AddDays(7), DateTimeKind.Utc),
+            EndDateUtc = DateTime.SpecifyKind(DateTime.UtcNow.AddDays(8), DateTimeKind.Utc),
+            RegistrationDeadlineUtc = DateTime.SpecifyKind(DateTime.UtcNow.AddDays(5), DateTimeKind.Utc),
+            MaxCapacity = 10,
+            MaxCompanions = 2,
+            IsPublished = true
+        };
+        _context.Events.Add(evt);
+        await _context.SaveChangesAsync();
+
+        var brokerRegistration = new Registration
+        {
+            EventId = evt.Id,
+            RegistrationType = RegistrationType.Makler,
+            FirstName = "Max",
+            LastName = "Broker",
+            Email = "broker@example.com",
+            RegistrationDateUtc = DateTime.UtcNow,
+            IsConfirmed = true,
+            IsCancelled = false
+        };
+        _context.Registrations.Add(brokerRegistration);
+        await _context.SaveChangesAsync();
+
+        var guest1 = new Registration
+        {
+            EventId = evt.Id,
+            ParentRegistrationId = brokerRegistration.Id,
+            RegistrationType = RegistrationType.Guest,
+            FirstName = "Anna",
+            LastName = "Guest1",
+            Email = "guest1@example.com",
+            RegistrationDateUtc = DateTime.UtcNow,
+            IsConfirmed = true,
+            IsCancelled = false
+        };
+        var guest2 = new Registration
+        {
+            EventId = evt.Id,
+            ParentRegistrationId = brokerRegistration.Id,
+            RegistrationType = RegistrationType.Guest,
+            FirstName = "Peter",
+            LastName = "Guest2",
+            Email = "guest2@example.com",
+            RegistrationDateUtc = DateTime.UtcNow,
+            IsConfirmed = true,
+            IsCancelled = false
+        };
+        _context.Registrations.AddRange(guest1, guest2);
+        await _context.SaveChangesAsync();
+
+        // Act - cancel broker registration
+        var result = await _service.CancelRegistrationAsync(brokerRegistration.Id, "broker@example.com", null);
+
+        // Assert
+        Assert.True(result.Success);
+
+        var updatedBroker = await _context.Registrations.FindAsync(brokerRegistration.Id);
+        Assert.NotNull(updatedBroker);
+        Assert.True(updatedBroker.IsCancelled);
+
+        var updatedGuest1 = await _context.Registrations.FindAsync(guest1.Id);
+        Assert.NotNull(updatedGuest1);
+        Assert.False(updatedGuest1.IsCancelled, "Guest 1 should NOT be cancelled when broker cancels");
+
+        var updatedGuest2 = await _context.Registrations.FindAsync(guest2.Id);
+        Assert.NotNull(updatedGuest2);
+        Assert.False(updatedGuest2.IsCancelled, "Guest 2 should NOT be cancelled when broker cancels");
+    }
+
+    [Fact]
+    public async Task CancelRegistration_UpdatesRegistrationCount()
+    {
+        // Arrange
+        var evt = new Event
+        {
+            Title = "Test Event",
+            Location = "Test Location",
+            StartDateUtc = DateTime.SpecifyKind(DateTime.UtcNow.AddDays(7), DateTimeKind.Utc),
+            EndDateUtc = DateTime.SpecifyKind(DateTime.UtcNow.AddDays(8), DateTimeKind.Utc),
+            RegistrationDeadlineUtc = DateTime.SpecifyKind(DateTime.UtcNow.AddDays(5), DateTimeKind.Utc),
+            MaxCapacity = 10,
+            MaxCompanions = 2,
+            IsPublished = true
+        };
+        _context.Events.Add(evt);
+        await _context.SaveChangesAsync();
+
+        var reg1 = new Registration
+        {
+            EventId = evt.Id,
+            RegistrationType = RegistrationType.Makler,
+            FirstName = "Max",
+            LastName = "One",
+            Email = "reg1@example.com",
+            RegistrationDateUtc = DateTime.UtcNow,
+            IsConfirmed = true,
+            IsCancelled = false
+        };
+        var reg2 = new Registration
+        {
+            EventId = evt.Id,
+            RegistrationType = RegistrationType.Makler,
+            FirstName = "Peter",
+            LastName = "Two",
+            Email = "reg2@example.com",
+            RegistrationDateUtc = DateTime.UtcNow,
+            IsConfirmed = true,
+            IsCancelled = false
+        };
+        _context.Registrations.AddRange(reg1, reg2);
+        await _context.SaveChangesAsync();
+
+        // Cancel one registration
+        var cancelResult = await _service.CancelRegistrationAsync(reg1.Id, "reg1@example.com", null);
+        Assert.True(cancelResult.Success);
+
+        // Load event with registrations to check count
+        var evtWithRegs = await _context.Events
+            .Include(e => e.Registrations)
+            .FirstAsync(e => e.Id == evt.Id);
+
+        // Assert count is 1 (not 2)
+        Assert.Equal(1, evtWithRegs.GetCurrentRegistrationCount());
+    }
+
+    [Fact]
     public async Task GetGuestRegistrationsAsync_ReturnsGuestsWithDetails()
     {
         // Arrange
