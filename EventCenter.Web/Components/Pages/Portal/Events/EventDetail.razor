@@ -65,6 +65,22 @@ else
                     }
                 </div>
 
+                <!-- Cancellation Messages -->
+                @if (!string.IsNullOrEmpty(cancelSuccessMessage))
+                {
+                    <div class="alert alert-success alert-dismissible fade show">
+                        <i class="bi bi-check-circle"></i> @cancelSuccessMessage
+                        <button type="button" class="btn-close" @onclick="() => cancelSuccessMessage = null"></button>
+                    </div>
+                }
+                @if (!string.IsNullOrEmpty(cancelErrorMessage))
+                {
+                    <div class="alert alert-danger alert-dismissible fade show">
+                        <i class="bi bi-exclamation-triangle"></i> @cancelErrorMessage
+                        <button type="button" class="btn-close" @onclick="() => cancelErrorMessage = null"></button>
+                    </div>
+                }
+
                 <!-- Description Section -->
                 <div class="mb-4">
                     <h4>Beschreibung</h4>
@@ -212,8 +228,13 @@ else
                                         @foreach (var guest in userGuestRegistrations)
                                         {
                                             var guestCost = guest.RegistrationAgendaItems.Sum(rai => rai.AgendaItem.CostForGuest);
+                                            var guestDisplayName = (string.IsNullOrWhiteSpace(guest.Salutation)
+                                                ? string.Empty
+                                                : guest.Salutation + " ")
+                                                + guest.FirstName + " " + guest.LastName;
+                                            var guestId = guest.Id;
                                             <div class="list-group-item">
-                                                <div class="d-flex w-100 justify-content-between">
+                                                <div class="d-flex w-100 justify-content-between align-items-center">
                                                     <div>
                                                         <h6 class="mb-1">
                                                             @if (!string.IsNullOrWhiteSpace(guest.Salutation))
@@ -227,7 +248,7 @@ else
                                                             <p class="mb-1 text-muted small">@guest.RelationshipType</p>
                                                         }
                                                     </div>
-                                                    <div>
+                                                    <div class="d-flex align-items-center gap-2">
                                                         @if (guestCost > 0)
                                                         {
                                                             <span class="badge bg-primary">@guestCost.ToString("N2") EUR</span>
@@ -235,6 +256,13 @@ else
                                                         else
                                                         {
                                                             <span class="badge bg-success">Kostenfrei</span>
+                                                        }
+                                                        @if (evt!.GetCurrentState() == EventState.Public)
+                                                        {
+                                                            <button class="btn btn-outline-danger btn-sm"
+                                                                    @onclick="() => OpenCancelModal(guestId, guestDisplayName, false)">
+                                                                <i class="bi bi-x-circle"></i> Stornieren
+                                                            </button>
                                                         }
                                                     </div>
                                                 </div>
@@ -433,9 +461,26 @@ else
 
                     @if (isUserRegistered)
                     {
-                        <div class="alert alert-success">
+                        var userRegName = userRegistration != null
+                            ? userRegistration.FirstName + " " + userRegistration.LastName
+                            : string.Empty;
+                        var userRegId = userRegistration?.Id ?? 0;
+                        <div class="alert alert-success mb-2">
                             <i class="bi bi-check-circle"></i> Sie sind bereits angemeldet.
                         </div>
+                        @if (currentState == EventState.Public)
+                        {
+                            <button class="btn btn-outline-danger btn-sm w-100 mb-2"
+                                    @onclick="() => OpenCancelModal(userRegId, userRegName, true)">
+                                <i class="bi bi-x-circle"></i> Anmeldung stornieren
+                            </button>
+                        }
+                        else
+                        {
+                            <div class="text-muted small mb-2">
+                                <i class="bi bi-info-circle"></i> Stornierung nicht möglich (Frist abgelaufen am @TimeZoneHelper.FormatDateTimeCet(DateTime.SpecifyKind(evt!.RegistrationDeadlineUtc, DateTimeKind.Utc), "dd.MM.yyyy"))
+                            </div>
+                        }
                     }
                     else if (currentState == EventState.Public && !isFull)
                     {
@@ -473,6 +518,39 @@ else
             </div>
         </div>
     </div>
+
+    <!-- Cancellation Confirmation Modal -->
+    @if (showCancelModal)
+    {
+        <div class="modal show d-block" tabindex="-1" style="background-color: rgba(0,0,0,0.5);">
+            <div class="modal-dialog">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h5 class="modal-title">Anmeldung stornieren</h5>
+                        <button type="button" class="btn-close" @onclick="CloseCancelModal"></button>
+                    </div>
+                    <div class="modal-body">
+                        <p>Möchten Sie die Anmeldung von <strong>@cancellingRegistrationName</strong> wirklich stornieren?</p>
+                        <div class="mb-3">
+                            <label class="form-label">Grund (optional)</label>
+                            <textarea @bind="cancellationReason" class="form-control" rows="3"
+                                      placeholder="Optional: Warum stornieren Sie?"></textarea>
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" @onclick="CloseCancelModal">Abbrechen</button>
+                        <button type="button" class="btn btn-danger" @onclick="ConfirmCancellation" disabled="@isCancelling">
+                            @if (isCancelling)
+                            {
+                                <span class="spinner-border spinner-border-sm me-2"></span>
+                            }
+                            Stornieren
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    }
 }
 
 @code {
@@ -483,6 +561,16 @@ else
     private bool isLoading = true;
     private bool isUserRegistered = false;
     private string userEmail = string.Empty;
+    private Registration? userRegistration;
+
+    // Cancellation state
+    private bool showCancelModal = false;
+    private bool isCancelling = false;
+    private string? cancellationReason;
+    private int? cancellingRegistrationId;
+    private string? cancellingRegistrationName;
+    private string? cancelSuccessMessage;
+    private string? cancelErrorMessage;
 
     // Guest management state
     private bool showGuestForm = false;
@@ -528,6 +616,7 @@ else
                 if (brokerRegistration != null)
                 {
                     isUserRegistered = true;
+                    userRegistration = brokerRegistration;
                     userBrokerRegistrationId = brokerRegistration.Id;
 
                     // Load guest data
@@ -549,6 +638,84 @@ else
             userGuestRegistrations = await RegistrationService.GetGuestRegistrationsAsync(userBrokerRegistrationId.Value);
             totalGuestCost = userGuestRegistrations.Sum(g =>
                 g.RegistrationAgendaItems.Sum(rai => rai.AgendaItem.CostForGuest));
+        }
+    }
+
+    private async Task LoadPageData()
+    {
+        evt = await EventService.GetEventByIdAsync(EventId);
+        if (evt == null) return;
+
+        isUserRegistered = false;
+        userRegistration = null;
+        userBrokerRegistrationId = null;
+        userGuestRegistrations = new();
+        currentGuestCount = 0;
+        totalGuestCost = 0;
+
+        if (!string.IsNullOrWhiteSpace(userEmail))
+        {
+            var brokerRegistration = evt.Registrations?.FirstOrDefault(r =>
+                r.Email.Equals(userEmail, StringComparison.OrdinalIgnoreCase) &&
+                !r.IsCancelled &&
+                r.RegistrationType == RegistrationType.Makler);
+
+            if (brokerRegistration != null)
+            {
+                isUserRegistered = true;
+                userRegistration = brokerRegistration;
+                userBrokerRegistrationId = brokerRegistration.Id;
+                await LoadGuestDataAsync();
+            }
+        }
+    }
+
+    private void OpenCancelModal(int registrationId, string name, bool isOwnRegistration)
+    {
+        cancellingRegistrationId = registrationId;
+        cancellingRegistrationName = isOwnRegistration ? "Ihre Anmeldung" : name;
+        cancellationReason = null;
+        cancelSuccessMessage = null;
+        cancelErrorMessage = null;
+        showCancelModal = true;
+    }
+
+    private void CloseCancelModal()
+    {
+        showCancelModal = false;
+        cancellingRegistrationId = null;
+    }
+
+    private async Task ConfirmCancellation()
+    {
+        if (cancellingRegistrationId == null) return;
+
+        isCancelling = true;
+        try
+        {
+            var result = await RegistrationService.CancelRegistrationAsync(
+                cancellingRegistrationId.Value,
+                userEmail,
+                cancellationReason);
+
+            if (result.Success)
+            {
+                showCancelModal = false;
+                cancelSuccessMessage = "Anmeldung erfolgreich storniert.";
+                cancelErrorMessage = null;
+
+                // Refresh page state
+                await LoadPageData();
+            }
+            else
+            {
+                cancelErrorMessage = result.ErrorMessage;
+                showCancelModal = false;
+            }
+        }
+        finally
+        {
+            isCancelling = false;
         }
     }
 
