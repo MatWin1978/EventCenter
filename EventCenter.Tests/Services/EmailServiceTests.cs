@@ -12,10 +12,17 @@ namespace EventCenter.Tests.Services;
 public class TestEmailSender : IEmailSender
 {
     public List<Registration> SentConfirmations { get; } = new();
+    public List<EventCompany> SentInvitations { get; } = new();
 
     public Task SendRegistrationConfirmationAsync(Registration registration)
     {
         SentConfirmations.Add(registration);
+        return Task.CompletedTask;
+    }
+
+    public Task SendCompanyInvitationAsync(EventCompany invitation, Event evt, string personalMessage, string invitationLink)
+    {
+        SentInvitations.Add(invitation);
         return Task.CompletedTask;
     }
 }
