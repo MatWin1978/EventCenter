@@ -12,9 +12,11 @@ using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.Authentication.OpenIdConnect;
 using Microsoft.AspNetCore.Components.Authorization;
 using Microsoft.AspNetCore.Components.Server;
+using Microsoft.AspNetCore.RateLimiting;
 using Microsoft.IdentityModel.Tokens;
 using System.Security.Claims;
 using System.Text.Json;
+using System.Threading.RateLimiting;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -117,6 +119,26 @@ builder.Services.AddAuthorization(options =>
     options.AddPolicy("MaklerOnly", policy => policy.RequireRole("Makler"));
 });
 
+// Rate limiting for anonymous company booking endpoint (AUTH-03 security)
+builder.Services.AddRateLimiter(options =>
+{
+    options.AddFixedWindowLimiter(policyName: "CompanyBooking", opt =>
+    {
+        opt.PermitLimit = 10;
+        opt.Window = TimeSpan.FromMinutes(1);
+        opt.QueueProcessingOrder = QueueProcessingOrder.OldestFirst;
+        opt.QueueLimit = 0;
+    });
+
+    options.OnRejected = async (context, cancellationToken) =>
+    {
+        context.HttpContext.Response.StatusCode = StatusCodes.Status429TooManyRequests;
+        await context.HttpContext.Response.WriteAsync(
+            "Zu viele Anfragen. Bitte versuchen Sie es später erneut.",
+            cancellationToken);
+    };
+});
+
 // Register authentication state provider with 30-minute revalidation
 builder.Services.AddScoped<AuthenticationStateProvider, IdentityRevalidatingAuthStateProvider>();
 builder.Services.AddScoped<RevalidatingServerAuthenticationStateProvider, IdentityRevalidatingAuthStateProvider>();
@@ -136,6 +158,7 @@ app.UseHttpsRedirection();
 app.UseStaticFiles();
 app.UseAntiforgery();
 
+app.UseRateLimiter();
 app.UseAuthentication();
 app.UseAuthorization();
 
