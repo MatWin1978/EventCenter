@@ -38,8 +38,8 @@
 
 - [x] **COMP-01**: Admin kann Firma zu Veranstaltung einladen (US-08)
 - [x] **COMP-02**: Admin kann firmenspezifische Konditionen pro Agendapunkt festlegen (US-08)
-- [ ] **COMP-03**: Admin kann Einladungsmail an Firma versenden (US-08)
-- [ ] **COMP-04**: Admin kann Firmeneinladung löschen (US-09)
+- [x] **COMP-03**: Admin kann Einladungsmail an Firma versenden (US-08)
+- [x] **COMP-04**: Admin kann Firmeneinladung löschen (US-09)
 - [x] **COMP-05**: Admin kann Einladungs- und Buchungsstatus einer Firma einsehen (US-10)
 
 ### Teilnehmerverwaltung (Admin)
@@ -142,8 +142,8 @@
 | XOPT-02 | Phase 2 | Complete |
 | COMP-01 | Phase 4 | Complete |
 | COMP-02 | Phase 4 | Complete |
-| COMP-03 | Phase 4 | Pending |
-| COMP-04 | Phase 4 | Pending |
+| COMP-03 | Phase 4 | Complete |
+| COMP-04 | Phase 4 | Complete |
 | COMP-05 | Phase 4 | Complete |
 | PART-01 | Phase 7 | Pending |
 | PART-02 | Phase 7 | Pending |
