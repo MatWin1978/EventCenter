@@ -20,9 +20,16 @@ public class Registration
     public bool IsCancelled { get; set; }
     public DateTime? CancellationDateUtc { get; set; }
 
+    // Guest-specific fields (Phase 6)
+    public int? ParentRegistrationId { get; set; }  // NULL for broker/company, FK to broker's registration for guest
+    public string? Salutation { get; set; }         // "Herr", "Frau", "Divers"
+    public string? RelationshipType { get; set; }   // Free text: "Ehepartner", "Kollege", etc.
+
     // Navigation properties
     public Event Event { get; set; } = null!;
     public EventCompany? EventCompany { get; set; }
     public ICollection<EventOption> SelectedOptions { get; set; } = new List<EventOption>();
     public ICollection<RegistrationAgendaItem> RegistrationAgendaItems { get; set; } = new List<RegistrationAgendaItem>();
+    public Registration? ParentRegistration { get; set; }
+    public ICollection<Registration> GuestRegistrations { get; set; } = new List<Registration>();
 }

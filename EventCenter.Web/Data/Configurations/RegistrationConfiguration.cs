@@ -54,11 +54,27 @@ public class RegistrationConfiguration : IEntityTypeConfiguration<Registration>
         builder.Property(r => r.CancellationDateUtc)
             .IsRequired(false);
 
+        // Guest-related field configurations
+        builder.Property(r => r.Salutation)
+            .HasMaxLength(50);
+
+        builder.Property(r => r.RelationshipType)
+            .HasMaxLength(100);
+
+        // Self-referencing relationship: guest -> broker registration
+        builder.HasOne(r => r.ParentRegistration)
+            .WithMany(r => r.GuestRegistrations)
+            .HasForeignKey(r => r.ParentRegistrationId)
+            .OnDelete(DeleteBehavior.Restrict); // Prevent cascade delete of guests
+
         // Index on EventId for faster lookup
         builder.HasIndex(r => r.EventId);
 
         // Index on Email for duplicate checking
         builder.HasIndex(r => new { r.EventId, r.Email });
+
+        // Index on ParentRegistrationId for guest count queries
+        builder.HasIndex(r => r.ParentRegistrationId);
 
         // Many-to-many relationship with EventOption
         builder.HasMany(r => r.SelectedOptions)
