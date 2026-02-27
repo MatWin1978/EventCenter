@@ -71,9 +71,9 @@
 
 ### Gastanmeldung (Makler)
 
-- [ ] **GREG-01**: Makler kann Begleitperson für Veranstaltung anmelden (US-17)
-- [ ] **GREG-02**: System prüft Begleitpersonenlimit pro Makler
-- [ ] **GREG-03**: Makler gibt Gast-Daten ein (Anrede, Name, E-Mail, Beziehungstyp)
+- [x] **GREG-01**: Makler kann Begleitperson für Veranstaltung anmelden (US-17)
+- [x] **GREG-02**: System prüft Begleitpersonenlimit pro Makler
+- [x] **GREG-03**: Makler gibt Gast-Daten ein (Anrede, Name, E-Mail, Beziehungstyp)
 
 ### Stornierung (Makler)
 
@@ -96,7 +96,7 @@
 ### E-Mail-Benachrichtigungen
 
 - [x] **MAIL-01**: System sendet Bestätigung an Makler nach Selbstanmeldung
-- [ ] **MAIL-02**: System sendet Bestätigung an Makler nach Gastanmeldung
+- [x] **MAIL-02**: System sendet Bestätigung an Makler nach Gastanmeldung
 - [x] **MAIL-03**: System sendet Einladung an Firma mit GUID-Link
 - [x] **MAIL-04**: System sendet Benachrichtigung an Admin nach Firmenbuchung
 - [x] **MAIL-05**: System sendet Benachrichtigung an Admin nach Firmenstorno
@@ -160,9 +160,9 @@
 | MREG-02 | Phase 3 | Complete (03-01) |
 | MREG-03 | Phase 3 | Complete |
 | MREG-04 | Phase 3 | Complete |
-| GREG-01 | Phase 6 | Pending |
-| GREG-02 | Phase 6 | Pending |
-| GREG-03 | Phase 6 | Pending |
+| GREG-01 | Phase 6 | Complete |
+| GREG-02 | Phase 6 | Complete |
+| GREG-03 | Phase 6 | Complete |
 | MCAN-01 | Phase 7 | Pending |
 | MCAN-02 | Phase 7 | Pending |
 | MCAN-03 | Phase 7 | Pending |
@@ -176,7 +176,7 @@
 | CBOK-07 | Phase 5 | Complete |
 | CBOK-08 | Phase 5 | Complete |
 | MAIL-01 | Phase 3 | Complete (03-01) |
-| MAIL-02 | Phase 6 | Pending |
+| MAIL-02 | Phase 6 | Complete |
 | MAIL-03 | Phase 4 | Complete |
 | MAIL-04 | Phase 5 | Complete |
 | MAIL-05 | Phase 5 | Complete |

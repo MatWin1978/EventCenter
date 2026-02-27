@@ -3,12 +3,12 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: unknown
-last_updated: "2026-02-27T12:26:42.155Z"
+last_updated: "2026-02-27T13:28:45Z"
 progress:
-  total_phases: 5
+  total_phases: 6
   completed_phases: 5
-  total_plans: 19
-  completed_plans: 19
+  total_plans: 21
+  completed_plans: 20
 ---
 
 # Project State
@@ -18,23 +18,23 @@ progress:
 See: .planning/PROJECT.md (updated 2026-02-26)
 
 **Core value:** Makler und eingeladene Firmen können sich reibungslos für Veranstaltungen anmelden, Agendapunkte auswählen und ihre Teilnahme verwalten.
-**Current focus:** Phase 5 - Company Booking Portal
+**Current focus:** Phase 6 - Guest Management
 
 ## Current Position
 
-Phase: 5 of 8 (Company Booking Portal)
-Plan: 3 of 3
-Status: Complete
-Last activity: 2026-02-27 - Completed plan 05-03 (Company Booking Portal UI)
+Phase: 6 of 8 (Guest Management)
+Plan: 1 of 2
+Status: In Progress
+Last activity: 2026-02-27 - Completed plan 06-01 (Guest Registration Backend Infrastructure)
 
-Progress: [█████░░░░░] 100.0% (5/5 phases, 19/19 plans completed)
+Progress: [██████░░░░] 95.2% (5/6 phases, 20/21 plans completed)
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 19
-- Average duration: 6.2 minutes
-- Total execution time: 2.66 hours
+- Total plans completed: 20
+- Average duration: 7.2 minutes
+- Total execution time: 2.92 hours
 
 **By Phase:**
 
@@ -45,16 +45,17 @@ Progress: [█████░░░░░] 100.0% (5/5 phases, 19/19 plans compl
 | 03 | 5 | 1402s | 280.4s |
 | 04 | 3 | 1094s | 364.7s |
 | 05 | 3 | 4087s | 1362.3s |
+| 06 | 1 | 905s | 905.0s |
 
 **Recent Plans:**
 
 | Phase-Plan | Duration | Tasks | Files | Date |
 |------------|----------|-------|-------|------|
+| 06-01 | 905s (15.1m) | 3 | 10 | 2026-02-27 |
 | 05-03 | 3478s (57.9m) | 3 | 1 | 2026-02-27 |
 | 05-02 | 430s (7.2m) | 3 | 4 | 2026-02-27 |
 | 05-01 | 179s (3.0m) | 3 | 7 | 2026-02-27 |
 | 04-03 | 318s (5.3m) | 3 | 2 | 2026-02-27 |
-| 04-02 | 518s (8.6m) | 1 | 6 | 2026-02-27 |
 
 ## Accumulated Context
 
@@ -132,6 +133,8 @@ Recent decisions affecting current work:
 - [Phase 05-03]: Simple success confirmation page without detailed summary
 - [Phase 05-03]: Management modal with cancel and non-participation options
 - [Phase 05-03]: Re-booking option shown only if deadline not passed
+- [Phase 06-01]: Email confirmation sent to broker (not guest) per MAIL-02 requirement
+- [Phase 06-01]: Self-referencing FK uses DeleteBehavior.Restrict to prevent cascade deletion of guests
 
 ### Pending Todos
 
@@ -150,5 +153,5 @@ None yet.
 ## Session Continuity
 
 Last session: 2026-02-27
-Stopped at: Completed 05-03-PLAN.md execution
-Resume file: .planning/phases/05-company-booking-portal/05-03-SUMMARY.md
+Stopped at: Completed 06-01-PLAN.md execution
+Resume file: .planning/phases/06-guest-management/06-01-SUMMARY.md
