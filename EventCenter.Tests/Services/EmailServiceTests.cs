@@ -1,5 +1,6 @@
 using EventCenter.Web.Domain.Entities;
 using EventCenter.Web.Infrastructure.Email;
+using EventCenter.Web.Models;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 
@@ -13,6 +14,8 @@ public class TestEmailSender : IEmailSender
 {
     public List<Registration> SentConfirmations { get; } = new();
     public List<EventCompany> SentInvitations { get; } = new();
+    public List<(EventCompany Company, Event Event)> SentAdminBookingNotifications { get; } = new();
+    public List<(EventCompany Company, Event Event, bool IsNonParticipation)> SentAdminCancellationNotifications { get; } = new();
 
     public Task SendRegistrationConfirmationAsync(Registration registration)
     {
@@ -23,6 +26,18 @@ public class TestEmailSender : IEmailSender
     public Task SendCompanyInvitationAsync(EventCompany invitation, Event evt, string personalMessage, string invitationLink)
     {
         SentInvitations.Add(invitation);
+        return Task.CompletedTask;
+    }
+
+    public Task SendAdminBookingNotificationAsync(EventCompany company, Event evt, List<ParticipantModel> participants)
+    {
+        SentAdminBookingNotifications.Add((company, evt));
+        return Task.CompletedTask;
+    }
+
+    public Task SendAdminCancellationNotificationAsync(EventCompany company, Event evt, string? cancellationComment, bool isNonParticipation)
+    {
+        SentAdminCancellationNotifications.Add((company, evt, isNonParticipation));
         return Task.CompletedTask;
     }
 }
