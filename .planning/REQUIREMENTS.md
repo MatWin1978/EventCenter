@@ -36,11 +36,11 @@
 
 ### Firmeneinladungen (Admin)
 
-- [ ] **COMP-01**: Admin kann Firma zu Veranstaltung einladen (US-08)
-- [ ] **COMP-02**: Admin kann firmenspezifische Konditionen pro Agendapunkt festlegen (US-08)
+- [x] **COMP-01**: Admin kann Firma zu Veranstaltung einladen (US-08)
+- [x] **COMP-02**: Admin kann firmenspezifische Konditionen pro Agendapunkt festlegen (US-08)
 - [ ] **COMP-03**: Admin kann Einladungsmail an Firma versenden (US-08)
 - [ ] **COMP-04**: Admin kann Firmeneinladung löschen (US-09)
-- [ ] **COMP-05**: Admin kann Einladungs- und Buchungsstatus einer Firma einsehen (US-10)
+- [x] **COMP-05**: Admin kann Einladungs- und Buchungsstatus einer Firma einsehen (US-10)
 
 ### Teilnehmerverwaltung (Admin)
 
@@ -97,7 +97,7 @@
 
 - [x] **MAIL-01**: System sendet Bestätigung an Makler nach Selbstanmeldung
 - [ ] **MAIL-02**: System sendet Bestätigung an Makler nach Gastanmeldung
-- [ ] **MAIL-03**: System sendet Einladung an Firma mit GUID-Link
+- [x] **MAIL-03**: System sendet Einladung an Firma mit GUID-Link
 - [ ] **MAIL-04**: System sendet Benachrichtigung an Admin nach Firmenbuchung
 - [ ] **MAIL-05**: System sendet Benachrichtigung an Admin nach Firmenstorno
 
@@ -140,11 +140,11 @@
 | AGND-03 | Phase 2 | Complete |
 | XOPT-01 | Phase 2 | Complete |
 | XOPT-02 | Phase 2 | Complete |
-| COMP-01 | Phase 4 | Pending |
-| COMP-02 | Phase 4 | Pending |
+| COMP-01 | Phase 4 | Complete |
+| COMP-02 | Phase 4 | Complete |
 | COMP-03 | Phase 4 | Pending |
 | COMP-04 | Phase 4 | Pending |
-| COMP-05 | Phase 4 | Pending |
+| COMP-05 | Phase 4 | Complete |
 | PART-01 | Phase 7 | Pending |
 | PART-02 | Phase 7 | Pending |
 | PART-03 | Phase 7 | Pending |
@@ -177,7 +177,7 @@
 | CBOK-08 | Phase 5 | Pending |
 | MAIL-01 | Phase 3 | Complete (03-01) |
 | MAIL-02 | Phase 6 | Pending |
-| MAIL-03 | Phase 4 | Pending |
+| MAIL-03 | Phase 4 | Complete |
 | MAIL-04 | Phase 5 | Pending |
 | MAIL-05 | Phase 5 | Pending |
 

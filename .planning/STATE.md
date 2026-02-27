@@ -3,12 +3,12 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: unknown
-last_updated: "2026-02-26T18:19:11.966Z"
+last_updated: "2026-02-27T08:14:32.065Z"
 progress:
-  total_phases: 3
+  total_phases: 4
   completed_phases: 3
-  total_plans: 13
-  completed_plans: 13
+  total_plans: 16
+  completed_plans: 14
 ---
 
 # Project State
@@ -18,23 +18,23 @@ progress:
 See: .planning/PROJECT.md (updated 2026-02-26)
 
 **Core value:** Makler und eingeladene Firmen können sich reibungslos für Veranstaltungen anmelden, Agendapunkte auswählen und ihre Teilnahme verwalten.
-**Current focus:** Phase 3 - Makler Event Discovery & Registration
+**Current focus:** Phase 4 - Company Invitations
 
 ## Current Position
 
-Phase: 3 of 8 (Makler Event Discovery & Registration)
-Plan: 5 of 5
-Status: Phase Complete
-Last activity: 2026-02-26 - Completed plan 03-05 (Makler Portal UI Pages)
+Phase: 4 of 8 (Company Invitations)
+Plan: 1 of 3
+Status: In Progress
+Last activity: 2026-02-27 - Completed plan 04-01 (Domain Model & Email Infrastructure)
 
-Progress: [███░░░░░░░] 35.7% (2/8 phases, 13/13 plans completed)
+Progress: [███░░░░░░░] 37.5% (3/8 phases, 14/16 plans completed)
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 12
-- Average duration: 5.0 minutes
-- Total execution time: 1.00 hours
+- Total plans completed: 14
+- Average duration: 5.1 minutes
+- Total execution time: 1.19 hours
 
 **By Phase:**
 
@@ -42,18 +42,18 @@ Progress: [███░░░░░░░] 35.7% (2/8 phases, 13/13 plans comple
 |-------|-------|-------|----------|
 | 01 | 4 | 1303s | 325.8s |
 | 02 | 4 | 2011s | 502.8s |
-| 03 | 4 | 1133s | 283.3s |
+| 03 | 5 | 1402s | 280.4s |
+| 04 | 1 | 258s | 258.0s |
 
 **Recent Plans:**
 
 | Phase-Plan | Duration | Tasks | Files | Date |
 |------------|----------|-------|-------|------|
+| 04-01 | 258s (4.3m) | 2 | 11 | 2026-02-27 |
+| 03-05 | 269s (4.5m) | 3 | 3 | 2026-02-26 |
 | 03-04 | 169s (2.8m) | 2 | 2 | 2026-02-26 |
 | 03-03 | 199s (3.3m) | 2 | 0 | 2026-02-26 |
 | 03-02 | 283s (4.7m) | 2 | 5 | 2026-02-26 |
-| 03-01 | 199s (3.3m) | 2 | 14 | 2026-02-26 |
-| 02-04 | 362s (6.0m) | 2 | 1 | 2026-02-26 |
-| Phase 03 P05 | 269 | 3 tasks | 3 files |
 
 ## Accumulated Context
 
@@ -104,6 +104,12 @@ Recent decisions affecting current work:
 - [Phase 03-05]: Sidebar layout with sticky positioning for EventDetail page (main content left, key info right)
 - [Phase 03-05]: Single-page registration flow with all sections visible (no wizard steps)
 - [Phase 03-05]: Pre-select and disable mandatory agenda items (cannot be unchecked)
+- [Phase 04-01]: Store InvitationStatus as string in database for readability (following existing enum pattern)
+- [Phase 04-01]: Use composite primary key (EventCompanyId, AgendaItemId) for EventCompanyAgendaItemPrice join entity
+- [Phase 04-01]: CustomPrice nullable - null indicates use base price from EventAgendaItem.CostForMakler
+- [Phase 04-01]: Add unique filtered index on InvitationCode to prevent duplicate codes (when not null)
+- [Phase 04-01]: Include ExpiresAtUtc field now for Phase 5 GUID expiration (leave null until needed)
+- [Phase 04-01]: Email template shows base price vs custom price in table format for transparency
 
 ### Pending Todos
 
@@ -121,6 +127,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-02-26
-Stopped at: Completed 03-04-PLAN.md execution
-Resume file: .planning/phases/03-makler-event-discovery-registration/03-04-SUMMARY.md
+Last session: 2026-02-27
+Stopped at: Completed 04-01-PLAN.md execution
+Resume file: .planning/phases/04-company-invitations/04-01-SUMMARY.md
