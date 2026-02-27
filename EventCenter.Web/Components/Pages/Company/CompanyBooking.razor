@@ -1,0 +1,777 @@
+@page "/company/booking/{InvitationCode}"
+@using EventCenter.Web.Services
+@using EventCenter.Web.Domain.Entities
+@using EventCenter.Web.Domain.Enums
+@using EventCenter.Web.Infrastructure.Helpers
+@using EventCenter.Web.Models
+@using EventCenter.Web.Validators
+@using Microsoft.AspNetCore.Components.Forms
+@using Blazored.FluentValidation
+@using System.Globalization
+@using Microsoft.AspNetCore.Authorization
+@attribute [AllowAnonymous]
+@inject CompanyBookingService BookingService
+@inject NavigationManager NavigationManager
+
+<PageTitle>@(eventCompany?.CompanyName ?? "Firmenbuchung") - Veranstaltungscenter</PageTitle>
+
+@if (viewState == "loading")
+{
+    <div class="text-center py-5">
+        <div class="spinner-border text-primary" role="status">
+            <span class="visually-hidden">Lädt...</span>
+        </div>
+        <p class="mt-2 text-muted">Einladung wird überprüft...</p>
+    </div>
+}
+else if (viewState == "error")
+{
+    <div class="container py-5">
+        <div class="card border-danger">
+            <div class="card-body text-center">
+                <i class="bi bi-exclamation-triangle-fill text-danger" style="font-size: 4rem;"></i>
+                <h3 class="mt-3">Einladung ungültig</h3>
+                <p class="text-muted">@errorMessage</p>
+                @if (!string.IsNullOrEmpty(contactEmail))
+                {
+                    <p>Bitte kontaktieren Sie uns unter <strong>@contactEmail</strong> für eine neue Einladung.</p>
+                }
+            </div>
+        </div>
+    </div>
+}
+else if (viewState == "form")
+{
+    <div class="container py-4">
+        <div class="row">
+            <!-- Main Form Column -->
+            <div class="col-lg-8">
+                <!-- Event Summary Header -->
+                <div class="card mb-4">
+                    <div class="card-body">
+                        <h3 class="mb-3">@eventCompany.Event.Title</h3>
+                        <p class="mb-2">
+                            <i class="bi bi-calendar-event"></i>
+                            @TimeZoneHelper.FormatDateTimeCet(DateTime.SpecifyKind(eventCompany.Event.StartDateUtc, DateTimeKind.Utc), "dd.MM.yyyy HH:mm")
+                            -
+                            @TimeZoneHelper.FormatDateTimeCet(DateTime.SpecifyKind(eventCompany.Event.EndDateUtc, DateTimeKind.Utc), "HH:mm")
+                        </p>
+                        <p class="mb-2">
+                            <i class="bi bi-geo-alt"></i> @eventCompany.Event.Location
+                        </p>
+                        <p class="mb-0">
+                            <span class="badge bg-info">@eventCompany.CompanyName</span>
+                        </p>
+                    </div>
+                </div>
+
+                @if (!string.IsNullOrWhiteSpace(submitErrorMessage))
+                {
+                    <div class="alert alert-danger alert-dismissible fade show" role="alert">
+                        <i class="bi bi-exclamation-triangle"></i> @submitErrorMessage
+                        <button type="button" class="btn-close" @onclick="@(() => submitErrorMessage = null)"></button>
+                    </div>
+                }
+
+                <EditForm Model="@model" OnValidSubmit="@HandleSubmitBooking">
+                    <FluentValidationValidator />
+
+                    <!-- Participant Table -->
+                    <div class="card mb-4">
+                        <div class="card-header bg-primary text-white">
+                            <h4 class="mb-0">Teilnehmer</h4>
+                        </div>
+                        <div class="card-body">
+                            <div class="table-responsive">
+                                <table class="table table-bordered">
+                                    <thead>
+                                        <tr>
+                                            <th style="width: 10%;">Anrede</th>
+                                            <th style="width: 15%;">Vorname</th>
+                                            <th style="width: 15%;">Nachname</th>
+                                            <th style="width: 20%;">E-Mail</th>
+                                            <th style="width: 30%;">Agendapunkte</th>
+                                            <th style="width: 10%;"></th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        @for (int i = 0; i < model.Participants.Count; i++)
+                                        {
+                                            var index = i; // Capture for lambda
+                                            var participant = model.Participants[index];
+
+                                            <tr>
+                                                <td>
+                                                    <InputSelect @bind-Value="participant.Salutation" class="form-select form-select-sm">
+                                                        <option value="">Wählen...</option>
+                                                        <option value="Herr">Herr</option>
+                                                        <option value="Frau">Frau</option>
+                                                        <option value="Divers">Divers</option>
+                                                    </InputSelect>
+                                                </td>
+                                                <td>
+                                                    <InputText @bind-Value="participant.FirstName" class="form-control form-control-sm" placeholder="Vorname" />
+                                                </td>
+                                                <td>
+                                                    <InputText @bind-Value="participant.LastName" class="form-control form-control-sm" placeholder="Nachname" />
+                                                </td>
+                                                <td>
+                                                    <InputText @bind-Value="participant.Email" type="email" class="form-control form-control-sm" placeholder="email@example.com" />
+                                                </td>
+                                                <td>
+                                                    @foreach (var agendaItem in availableAgendaItems)
+                                                    {
+                                                        var isSelected = participant.SelectedAgendaItemIds.Contains(agendaItem.Id);
+                                                        var agendaItemId = agendaItem.Id;
+                                                        var price = GetAgendaItemPrice(agendaItem.Id);
+
+                                                        <div class="form-check">
+                                                            <input type="checkbox"
+                                                                   class="form-check-input"
+                                                                   id="participant-@index-agenda-@agendaItemId"
+                                                                   checked="@isSelected"
+                                                                   @onchange="@(() => ToggleParticipantAgendaItem(index, agendaItemId))" />
+                                                            <label class="form-check-label" for="participant-@index-agenda-@agendaItemId">
+                                                                @agendaItem.Title (@price.ToString("C", new CultureInfo("de-DE")))
+                                                            </label>
+                                                        </div>
+                                                    }
+                                                </td>
+                                                <td class="text-center">
+                                                    <button type="button"
+                                                            class="btn btn-sm btn-outline-danger"
+                                                            disabled="@(model.Participants.Count <= 1)"
+                                                            @onclick="@(() => RemoveParticipant(index))">
+                                                        <i class="bi bi-trash"></i>
+                                                    </button>
+                                                </td>
+                                            </tr>
+                                        }
+                                    </tbody>
+                                </table>
+                            </div>
+
+                            <button type="button" class="btn btn-outline-primary btn-sm" @onclick="AddParticipant">
+                                <i class="bi bi-plus-circle"></i> Teilnehmer hinzufügen
+                            </button>
+
+                            <ValidationSummary />
+                        </div>
+                    </div>
+
+                    <!-- Extra Options Section -->
+                    @if (availableOptions.Any())
+                    {
+                        <div class="card mb-4">
+                            <div class="card-header bg-primary text-white">
+                                <h4 class="mb-0">Zusatzoptionen</h4>
+                            </div>
+                            <div class="card-body">
+                                @foreach (var option in availableOptions)
+                                {
+                                    var isSelected = model.SelectedExtraOptionIds.Contains(option.Id);
+                                    var optionId = option.Id;
+
+                                    <div class="form-check card p-3 mb-2 @(isSelected ? "border-primary" : "")">
+                                        <input type="checkbox"
+                                               class="form-check-input"
+                                               id="option-@optionId"
+                                               checked="@isSelected"
+                                               @onchange="@(() => ToggleExtraOption(optionId))" />
+                                        <label class="form-check-label w-100" for="option-@optionId" style="cursor: pointer;">
+                                            <div class="d-flex justify-content-between align-items-start">
+                                                <div>
+                                                    <strong>@option.Name</strong>
+                                                    @if (!string.IsNullOrWhiteSpace(option.Description))
+                                                    {
+                                                        <br />
+                                                        <small class="text-muted">@option.Description</small>
+                                                    }
+                                                </div>
+                                                <div class="text-end">
+                                                    <strong>@option.Price.ToString("C", new CultureInfo("de-DE"))</strong>
+                                                </div>
+                                            </div>
+                                        </label>
+                                    </div>
+                                }
+                            </div>
+                        </div>
+                    }
+
+                    <!-- Submit Section -->
+                    <div class="card mb-4">
+                        <div class="card-body text-center">
+                            <button type="submit" class="btn btn-success btn-lg" disabled="@isSubmitting">
+                                @if (isSubmitting)
+                                {
+                                    <span class="spinner-border spinner-border-sm me-2"></span>
+                                }
+                                Buchung absenden
+                            </button>
+                        </div>
+                    </div>
+                </EditForm>
+            </div>
+
+            <!-- Cost Summary Sidebar -->
+            <div class="col-lg-4">
+                <div class="cost-summary-sticky">
+                    <div class="card border-success">
+                        <div class="card-header bg-success text-white">
+                            <h4 class="mb-0">Kostenübersicht</h4>
+                        </div>
+                        <div class="card-body">
+                            @if (model.Participants.Any(p => p.SelectedAgendaItemIds.Any()))
+                            {
+                                <h6 class="mb-2">Teilnehmerkosten:</h6>
+                                @foreach (var participant in model.Participants)
+                                {
+                                    var participantCost = CalculateParticipantCost(participant);
+                                    if (participantCost > 0)
+                                    {
+                                        var participantName = string.IsNullOrWhiteSpace(participant.FirstName) && string.IsNullOrWhiteSpace(participant.LastName)
+                                            ? "Teilnehmer"
+                                            : $"{participant.FirstName} {participant.LastName}".Trim();
+
+                                        <div class="d-flex justify-content-between mb-1">
+                                            <small>@participantName</small>
+                                            <small>@participantCost.ToString("C", new CultureInfo("de-DE"))</small>
+                                        </div>
+                                    }
+                                }
+                            }
+
+                            @if (model.SelectedExtraOptionIds.Any())
+                            {
+                                <hr />
+                                <h6 class="mb-2">Zusatzoptionen:</h6>
+                                @foreach (var optionId in model.SelectedExtraOptionIds)
+                                {
+                                    var option = availableOptions.FirstOrDefault(o => o.Id == optionId);
+                                    if (option != null)
+                                    {
+                                        <div class="d-flex justify-content-between mb-1">
+                                            <small>@option.Name</small>
+                                            <small>@option.Price.ToString("C", new CultureInfo("de-DE"))</small>
+                                        </div>
+                                    }
+                                }
+                            }
+
+                            <hr />
+                            <div class="d-flex justify-content-between align-items-center">
+                                <h4 class="mb-0">Gesamtkosten:</h4>
+                                <h4 class="mb-0 text-success">@TotalCost.ToString("C", new CultureInfo("de-DE"))</h4>
+                            </div>
+                            <small class="text-muted d-block mt-2">Alle Preise zzgl. MwSt.</small>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+}
+else if (viewState == "submitted")
+{
+    <div class="container py-5">
+        <div class="card">
+            <div class="card-body text-center">
+                <i class="bi bi-check-circle-fill text-success" style="font-size: 5rem;"></i>
+                <h2 class="mt-4">Buchung erfolgreich eingereicht</h2>
+                <p class="lead">Sie erhalten in Kürze eine Bestätigung per E-Mail.</p>
+                <hr />
+                <p class="mb-1"><strong>Firma:</strong> @eventCompany.CompanyName</p>
+                <p class="mb-0"><strong>Veranstaltung:</strong> @eventCompany.Event.Title</p>
+            </div>
+        </div>
+    </div>
+}
+else if (viewState == "booked")
+{
+    <div class="container py-4">
+        <!-- Event Summary Header -->
+        <div class="card mb-4">
+            <div class="card-body">
+                <h3 class="mb-3">@eventCompany.Event.Title</h3>
+                <p class="mb-2">
+                    <i class="bi bi-calendar-event"></i>
+                    @TimeZoneHelper.FormatDateTimeCet(DateTime.SpecifyKind(eventCompany.Event.StartDateUtc, DateTimeKind.Utc), "dd.MM.yyyy HH:mm")
+                    -
+                    @TimeZoneHelper.FormatDateTimeCet(DateTime.SpecifyKind(eventCompany.Event.EndDateUtc, DateTimeKind.Utc), "HH:mm")
+                </p>
+                <p class="mb-2">
+                    <i class="bi bi-geo-alt"></i> @eventCompany.Event.Location
+                </p>
+                <p class="mb-0">
+                    <span class="badge bg-info">@eventCompany.CompanyName</span>
+                    <span class="badge bg-success ms-2">Gebucht</span>
+                </p>
+            </div>
+        </div>
+
+        <!-- Booking Information -->
+        <div class="card mb-4">
+            <div class="card-header bg-primary text-white">
+                <h4 class="mb-0">Buchungsdetails</h4>
+            </div>
+            <div class="card-body">
+                @if (eventCompany.BookingDateUtc.HasValue)
+                {
+                    <p class="mb-3">
+                        <strong>Gebucht am:</strong>
+                        @TimeZoneHelper.FormatDateTimeCet(DateTime.SpecifyKind(eventCompany.BookingDateUtc.Value, DateTimeKind.Utc), "dd.MM.yyyy HH:mm")
+                    </p>
+                }
+
+                <h5 class="mb-3">Teilnehmer:</h5>
+                <div class="table-responsive">
+                    <table class="table table-bordered">
+                        <thead>
+                            <tr>
+                                <th>Name</th>
+                                <th>E-Mail</th>
+                                <th>Agendapunkte</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @if (eventCompany.Registrations != null)
+                            {
+                                @foreach (var registration in eventCompany.Registrations.Where(r => !r.IsCancelled))
+                                {
+                                    <tr>
+                                        <td>@registration.FirstName @registration.LastName</td>
+                                        <td>@registration.Email</td>
+                                        <td>
+                                            @if (registration.RegistrationAgendaItems != null && registration.RegistrationAgendaItems.Any())
+                                            {
+                                                @string.Join(", ", registration.RegistrationAgendaItems.Select(rai => rai.AgendaItem.Title))
+                                            }
+                                        </td>
+                                    </tr>
+                                }
+                            }
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- Management Actions -->
+        <div class="text-center">
+            <button type="button" class="btn btn-outline-primary btn-lg" @onclick="@(() => showManagementModal = true)">
+                Buchung bearbeiten
+            </button>
+        </div>
+    </div>
+}
+else if (viewState == "cancelled")
+{
+    <div class="container py-4">
+        <!-- Event Summary Header -->
+        <div class="card mb-4">
+            <div class="card-body">
+                <h3 class="mb-3">@eventCompany.Event.Title</h3>
+                <p class="mb-2">
+                    <i class="bi bi-calendar-event"></i>
+                    @TimeZoneHelper.FormatDateTimeCet(DateTime.SpecifyKind(eventCompany.Event.StartDateUtc, DateTimeKind.Utc), "dd.MM.yyyy HH:mm")
+                    -
+                    @TimeZoneHelper.FormatDateTimeCet(DateTime.SpecifyKind(eventCompany.Event.EndDateUtc, DateTimeKind.Utc), "HH:mm")
+                </p>
+                <p class="mb-2">
+                    <i class="bi bi-geo-alt"></i> @eventCompany.Event.Location
+                </p>
+                <p class="mb-0">
+                    <span class="badge bg-info">@eventCompany.CompanyName</span>
+                    @if (eventCompany.IsNonParticipation)
+                    {
+                        <span class="badge bg-warning text-dark ms-2">Nicht-Teilnahme</span>
+                    }
+                    else
+                    {
+                        <span class="badge bg-danger ms-2">Storniert</span>
+                    }
+                </p>
+            </div>
+        </div>
+
+        <!-- Cancellation Details -->
+        <div class="card mb-4">
+            <div class="card-header bg-secondary text-white">
+                <h4 class="mb-0">@(eventCompany.IsNonParticipation ? "Nicht-Teilnahme" : "Stornierung")</h4>
+            </div>
+            <div class="card-body">
+                @if (eventCompany.Registrations != null && eventCompany.Registrations.Any(r => r.CancellationDateUtc.HasValue))
+                {
+                    var cancellationDate = eventCompany.Registrations.First(r => r.CancellationDateUtc.HasValue).CancellationDateUtc.Value;
+                    <p class="mb-2">
+                        <strong>Datum:</strong>
+                        @TimeZoneHelper.FormatDateTimeCet(DateTime.SpecifyKind(cancellationDate, DateTimeKind.Utc), "dd.MM.yyyy HH:mm")
+                    </p>
+                }
+
+                @if (!string.IsNullOrWhiteSpace(eventCompany.CancellationComment))
+                {
+                    <p class="mb-0">
+                        <strong>Kommentar:</strong><br />
+                        @eventCompany.CancellationComment
+                    </p>
+                }
+            </div>
+        </div>
+
+        <!-- Re-booking Option -->
+        @{
+            var isDeadlinePassed = DateTime.UtcNow > eventCompany.Event.RegistrationDeadlineUtc;
+        }
+
+        @if (!isDeadlinePassed)
+        {
+            <div class="text-center">
+                <button type="button" class="btn btn-primary btn-lg" @onclick="HandleReBooking">
+                    Erneut buchen
+                </button>
+            </div>
+        }
+        else
+        {
+            <div class="alert alert-warning text-center">
+                <i class="bi bi-exclamation-triangle"></i>
+                Die Anmeldefrist ist abgelaufen.
+            </div>
+        }
+    </div>
+}
+
+<!-- Management Modal -->
+@if (showManagementModal)
+{
+    <div class="modal fade show d-block" tabindex="-1" style="background-color: rgba(0,0,0,0.5);">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Buchung bearbeiten</h5>
+                    <button type="button" class="btn-close" @onclick="@(() => showManagementModal = false)"></button>
+                </div>
+                <div class="modal-body">
+                    <p>Wählen Sie eine Aktion:</p>
+                    <div class="mb-3">
+                        <label class="form-label">Kommentar / Begründung (optional)</label>
+                        <textarea class="form-control" rows="3" @bind="managementComment"
+                                  placeholder="Optional: Geben Sie einen Grund an..."></textarea>
+                    </div>
+                    @if (!string.IsNullOrEmpty(managementError))
+                    {
+                        <div class="alert alert-danger">@managementError</div>
+                    }
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" @onclick="@(() => showManagementModal = false)">Abbrechen</button>
+                    <button type="button" class="btn btn-warning" @onclick="HandleNonParticipation" disabled="@isProcessing">
+                        @if (isProcessing)
+                        {
+                            <span class="spinner-border spinner-border-sm me-1"></span>
+                        }
+                        Nicht-Teilnahme melden
+                    </button>
+                    <button type="button" class="btn btn-danger" @onclick="HandleCancellation" disabled="@isProcessing">
+                        @if (isProcessing)
+                        {
+                            <span class="spinner-border spinner-border-sm me-1"></span>
+                        }
+                        Buchung stornieren
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+}
+
+<style>
+    .cost-summary-sticky {
+        position: sticky;
+        top: 20px;
+    }
+
+    @@media (max-width: 991.98px) {
+        .cost-summary-sticky {
+            position: relative;
+            top: 0;
+        }
+    }
+</style>
+
+@code {
+    [Parameter]
+    public string InvitationCode { get; set; } = string.Empty;
+
+    private EventCompany? eventCompany;
+    private CompanyBookingFormModel model = new();
+    private List<EventAgendaItem> availableAgendaItems = new();
+    private List<EventOption> availableOptions = new();
+
+    private string? viewState = "loading"; // "loading", "error", "form", "submitted", "booked", "cancelled"
+    private string? errorMessage;
+    private string? contactEmail;
+    private string? submitErrorMessage;
+
+    private bool isSubmitting = false;
+    private bool showManagementModal = false;
+    private bool isProcessing = false;
+    private string? managementComment;
+    private string? managementError;
+
+    private decimal TotalCost
+    {
+        get
+        {
+            if (eventCompany == null) return 0;
+
+            var participantTotal = model.Participants.Sum(p => CalculateParticipantCost(p));
+            var optionsTotal = model.SelectedExtraOptionIds
+                .Select(id => availableOptions.FirstOrDefault(o => o.Id == id)?.Price ?? 0)
+                .Sum();
+
+            return participantTotal + optionsTotal;
+        }
+    }
+
+    protected override async Task OnInitializedAsync()
+    {
+        var (isValid, company, error) = await BookingService.ValidateInvitationCodeAsync(InvitationCode);
+
+        if (!isValid)
+        {
+            viewState = "error";
+            errorMessage = error ?? "Dieser Link ist ungültig oder abgelaufen.";
+            contactEmail = "admin@example.com"; // Could be loaded from config
+            return;
+        }
+
+        eventCompany = company;
+        contactEmail = eventCompany?.Event?.ContactEmail;
+
+        // Determine view state based on invitation status
+        if (eventCompany?.Status == InvitationStatus.Sent)
+        {
+            // First visit - show booking form
+            viewState = "form";
+            await LoadBookingFormData();
+        }
+        else if (eventCompany?.Status == InvitationStatus.Booked)
+        {
+            // Return visit - show booking status
+            viewState = "booked";
+            await LoadBookingStatus();
+        }
+        else if (eventCompany?.Status == InvitationStatus.Cancelled)
+        {
+            // Cancelled - show cancellation status
+            viewState = "cancelled";
+            await LoadBookingStatus();
+        }
+        else
+        {
+            viewState = "error";
+            errorMessage = "Diese Einladung wurde noch nicht versendet.";
+        }
+    }
+
+    private async Task LoadBookingFormData()
+    {
+        if (eventCompany == null) return;
+
+        // Load available agenda items for Makler participation
+        availableAgendaItems = eventCompany.Event.AgendaItems
+            .Where(ai => ai.MaklerCanParticipate)
+            .OrderBy(ai => ai.StartDateTimeUtc)
+            .ToList();
+
+        // Load available event options
+        availableOptions = eventCompany.Event.EventOptions?.ToList() ?? new();
+
+        // Initialize model
+        model = new CompanyBookingFormModel
+        {
+            EventCompanyId = eventCompany.Id,
+            Participants = new List<ParticipantModel> { new ParticipantModel() }
+        };
+    }
+
+    private async Task LoadBookingStatus()
+    {
+        if (eventCompany == null) return;
+
+        // Reload with navigation properties
+        eventCompany = await BookingService.GetBookingStatusAsync(eventCompany.Id);
+    }
+
+    private void AddParticipant()
+    {
+        model.Participants.Add(new ParticipantModel());
+        StateHasChanged();
+    }
+
+    private void RemoveParticipant(int index)
+    {
+        if (model.Participants.Count > 1)
+        {
+            model.Participants.RemoveAt(index);
+            StateHasChanged();
+        }
+    }
+
+    private void ToggleParticipantAgendaItem(int participantIndex, int agendaItemId)
+    {
+        var participant = model.Participants[participantIndex];
+        if (participant.SelectedAgendaItemIds.Contains(agendaItemId))
+        {
+            participant.SelectedAgendaItemIds.Remove(agendaItemId);
+        }
+        else
+        {
+            participant.SelectedAgendaItemIds.Add(agendaItemId);
+        }
+        StateHasChanged();
+    }
+
+    private void ToggleExtraOption(int optionId)
+    {
+        if (model.SelectedExtraOptionIds.Contains(optionId))
+        {
+            model.SelectedExtraOptionIds.Remove(optionId);
+        }
+        else
+        {
+            model.SelectedExtraOptionIds.Add(optionId);
+        }
+        StateHasChanged();
+    }
+
+    private decimal GetAgendaItemPrice(int agendaItemId)
+    {
+        // Check for company-specific custom price first
+        var customPrice = eventCompany?.AgendaItemPrices?
+            .FirstOrDefault(p => p.AgendaItemId == agendaItemId)?.CustomPrice;
+
+        if (customPrice.HasValue)
+            return customPrice.Value;
+
+        // Fallback to base price
+        return availableAgendaItems.FirstOrDefault(ai => ai.Id == agendaItemId)?.CostForMakler ?? 0;
+    }
+
+    private decimal CalculateParticipantCost(ParticipantModel participant)
+    {
+        return participant.SelectedAgendaItemIds
+            .Select(id => GetAgendaItemPrice(id))
+            .Sum();
+    }
+
+    private async Task HandleSubmitBooking()
+    {
+        if (eventCompany == null) return;
+
+        isSubmitting = true;
+        submitErrorMessage = null;
+
+        try
+        {
+            var (success, error) = await BookingService.SubmitBookingAsync(eventCompany.Id, model);
+
+            if (success)
+            {
+                viewState = "submitted";
+            }
+            else
+            {
+                submitErrorMessage = error ?? "Ein Fehler ist aufgetreten. Bitte versuchen Sie es erneut.";
+            }
+        }
+        catch (Exception ex)
+        {
+            submitErrorMessage = "Ein unerwarteter Fehler ist aufgetreten. Bitte versuchen Sie es später erneut.";
+        }
+        finally
+        {
+            isSubmitting = false;
+        }
+    }
+
+    private async Task HandleCancellation()
+    {
+        if (eventCompany == null) return;
+
+        isProcessing = true;
+        managementError = null;
+
+        try
+        {
+            var (success, error) = await BookingService.CancelBookingAsync(eventCompany.Id, managementComment);
+
+            if (success)
+            {
+                showManagementModal = false;
+                await LoadBookingStatus();
+                viewState = "cancelled";
+            }
+            else
+            {
+                managementError = error ?? "Stornierung fehlgeschlagen.";
+            }
+        }
+        catch (Exception ex)
+        {
+            managementError = "Ein unerwarteter Fehler ist aufgetreten.";
+        }
+        finally
+        {
+            isProcessing = false;
+        }
+    }
+
+    private async Task HandleNonParticipation()
+    {
+        if (eventCompany == null) return;
+
+        isProcessing = true;
+        managementError = null;
+
+        try
+        {
+            var (success, error) = await BookingService.ReportNonParticipationAsync(eventCompany.Id, managementComment);
+
+            if (success)
+            {
+                showManagementModal = false;
+                await LoadBookingStatus();
+                viewState = "cancelled";
+            }
+            else
+            {
+                managementError = error ?? "Nicht-Teilnahme konnte nicht gemeldet werden.";
+            }
+        }
+        catch (Exception ex)
+        {
+            managementError = "Ein unerwarteter Fehler ist aufgetreten.";
+        }
+        finally
+        {
+            isProcessing = false;
+        }
+    }
+
+    private void HandleReBooking()
+    {
+        // Reset form for re-booking
+        model = new CompanyBookingFormModel
+        {
+            EventCompanyId = eventCompany!.Id,
+            Participants = new List<ParticipantModel> { new ParticipantModel() }
+        };
+
+        viewState = "form";
+        StateHasChanged();
+    }
+}
