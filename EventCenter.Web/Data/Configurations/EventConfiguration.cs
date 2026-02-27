@@ -51,6 +51,14 @@ public class EventConfiguration : IEntityTypeConfiguration<Event>
         builder.Property(e => e.ContactPhone)
             .HasMaxLength(50);
 
+        builder.Property(e => e.EventType)
+            .IsRequired()
+            .HasMaxLength(50)
+            .HasConversion<string>();
+
+        builder.Property(e => e.ExternalRegistrationUrl)
+            .HasMaxLength(2000);
+
         builder.Property(e => e.DocumentPaths)
             .HasConversion(
                 v => JsonSerializer.Serialize(v, (JsonSerializerOptions?)null),
@@ -61,11 +69,6 @@ public class EventConfiguration : IEntityTypeConfiguration<Event>
 
         // Index on IsPublished for filtering published events
         builder.HasIndex(e => e.IsPublished);
-
-        // CHECK constraint: RegistrationDeadlineUtc must be <= StartDateUtc
-        builder.ToTable(t => t.HasCheckConstraint(
-            "CK_Event_RegistrationDeadlineBeforeStart",
-            "[RegistrationDeadlineUtc] <= [StartDateUtc]"));
 
         // Relationships
         builder.HasMany(e => e.AgendaItems)

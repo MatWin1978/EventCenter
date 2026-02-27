@@ -19,6 +19,9 @@ public class Event
     public string? ContactPhone { get; set; }
     public List<string> DocumentPaths { get; set; } = new();
 
+    public EventType EventType { get; set; } = EventType.InPerson;
+    public string? ExternalRegistrationUrl { get; set; }
+
     [System.ComponentModel.DataAnnotations.Timestamp]
     public byte[]? RowVersion { get; set; }
 
