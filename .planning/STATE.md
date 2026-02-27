@@ -2,13 +2,13 @@
 gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
-status: unknown
-last_updated: "2026-02-27T16:16:05.249Z"
+status: in_progress
+last_updated: "2026-02-27T20:16:03Z"
 progress:
-  total_phases: 7
+  total_phases: 8
   completed_phases: 7
-  total_plans: 25
-  completed_plans: 25
+  total_plans: 28
+  completed_plans: 26
 ---
 
 # Project State
@@ -18,16 +18,16 @@ progress:
 See: .planning/PROJECT.md (updated 2026-02-26)
 
 **Core value:** Makler und eingeladene Firmen können sich reibungslos für Veranstaltungen anmelden, Agendapunkte auswählen und ihre Teilnahme verwalten.
-**Current focus:** Phase 7 - Cancellation & Participant Management
+**Current focus:** Phase 8 - Webinar Support
 
 ## Current Position
 
-Phase: 7 of 7 (Cancellation & Participant Management)
-Plan: 4 of 4 (Phase Complete)
-Status: Phase 7 Complete
-Last activity: 2026-02-27 - Completed plan 07-04 (Admin Participant Management UI + EF Core Migration)
+Phase: 8 of 8 (Webinar Support)
+Plan: 1 of 3 (completed)
+Status: Phase 8 in progress
+Last activity: 2026-02-27 - Completed plan 08-01 (Webinar Support Domain Layer)
 
-Progress: [██████████] 100.0% (7/7 phases, 25/25 plans completed)
+Progress: [█████████▌] 92.9% (7/8 phases full, 26/28 plans completed)
 
 ## Performance Metrics
 
@@ -46,17 +46,18 @@ Progress: [██████████] 100.0% (7/7 phases, 25/25 plans compl
 | 04 | 3 | 1094s | 364.7s |
 | 05 | 3 | 4087s | 1362.3s |
 | 06 | 2 | 1351s | 675.5s |
+| 08 | 1 | 330s | 330s |
 
 **Recent Plans:**
 
 | Phase-Plan | Duration | Tasks | Files | Date |
 |------------|----------|-------|-------|------|
+| 08-01 | 330s (5.5m) | 2 | 8 | 2026-02-27 |
 | 07-02 | 280s (4.7m) | 2 | 5 | 2026-02-27 |
 | 07-01 | 241s (4.0m) | 2 | 7 | 2026-02-27 |
 | 06-02 | 446s (7.4m) | 2 | 3 | 2026-02-27 |
 | 06-01 | 905s (15.1m) | 3 | 10 | 2026-02-27 |
 | 05-03 | 3478s (57.9m) | 3 | 1 | 2026-02-27 |
-| 05-02 | 430s (7.2m) | 3 | 4 | 2026-02-27 |
 | Phase 07 P04 | 246 | 2 tasks | 7 files |
 | Phase 07 P03 | 305 | 2 tasks | 1 files |
 
@@ -154,6 +155,10 @@ Recent decisions affecting current work:
 - [Phase 07-03]: Cancel button in sidebar next to registration status (per locked user decision)
 - [Phase 07-03]: Local variable capture inside foreach for safe @onclick lambda closure in Blazor (avoids closure-over-loop-variable bug)
 - [Phase 07-03]: LoadPageData() method reloads full event state to enable immediate UI refresh and re-registration after cancellation
+- [Phase 08-01]: EventType stored as string in database via HasConversion<string>() following existing enum pattern
+- [Phase 08-01]: CK_Event_RegistrationDeadlineBeforeStart check constraint removed — invalid for webinars
+- [Phase 08-01]: ExternalRegistrationUrl optional at form level (draft-friendly), required at publish time via service guard
+- [Phase 08-01]: PublishEventAsync changed to Task<(bool Success, string? ErrorMessage)> for user-facing error messages
 
 ### Pending Todos
 
@@ -172,5 +177,5 @@ None yet.
 ## Session Continuity
 
 Last session: 2026-02-27
-Stopped at: Completed 07-04-PLAN.md execution (Phase 7 complete)
-Resume file: .planning/phases/07-cancellation-participant-management/07-04-SUMMARY.md
+Stopped at: Completed 08-01-PLAN.md execution (Phase 8 Plan 1 complete)
+Resume file: .planning/phases/08-webinar-support/08-01-SUMMARY.md

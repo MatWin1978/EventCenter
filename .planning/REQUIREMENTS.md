@@ -20,8 +20,8 @@
 
 ### Webinar-Verwaltung (Admin)
 
-- [ ] **WBNR-01**: Admin kann Webinar anlegen und bearbeiten (US-04)
-- [ ] **WBNR-02**: Admin kann Webinar veröffentlichen/zurückziehen (US-04)
+- [x] **WBNR-01**: Admin kann Webinar anlegen und bearbeiten (US-04)
+- [x] **WBNR-02**: Admin kann Webinar veröffentlichen/zurückziehen (US-04)
 
 ### Agendapunkte (Admin)
 
@@ -133,8 +133,8 @@
 | EVNT-02 | Phase 2 | Complete |
 | EVNT-03 | Phase 2 | Complete |
 | EVNT-04 | Phase 2 | Complete |
-| WBNR-01 | Phase 8 | Pending |
-| WBNR-02 | Phase 8 | Pending |
+| WBNR-01 | Phase 8 | Complete |
+| WBNR-02 | Phase 8 | Complete |
 | AGND-01 | Phase 2 | Complete |
 | AGND-02 | Phase 2 | Complete |
 | AGND-03 | Phase 2 | Complete |
