@@ -20,6 +20,11 @@ public class EventCompany
     public string? PersonalMessage { get; set; }
     public DateTime? ExpiresAtUtc { get; set; }
 
+    // Phase 05 fields - booking management
+    public string? CancellationComment { get; set; }
+    public DateTime? BookingDateUtc { get; set; }
+    public bool IsNonParticipation { get; set; }
+
     // Navigation properties
     public Event Event { get; set; } = null!;
     public ICollection<Registration> Registrations { get; set; } = new List<Registration>();
