@@ -16,6 +16,7 @@ public class TestEmailSender : IEmailSender
     public List<EventCompany> SentInvitations { get; } = new();
     public List<(EventCompany Company, Event Event)> SentAdminBookingNotifications { get; } = new();
     public List<(EventCompany Company, Event Event, bool IsNonParticipation)> SentAdminCancellationNotifications { get; } = new();
+    public List<(Registration Guest, Registration Broker)> SentGuestConfirmations { get; } = new();
 
     public Task SendRegistrationConfirmationAsync(Registration registration)
     {
@@ -38,6 +39,12 @@ public class TestEmailSender : IEmailSender
     public Task SendAdminCancellationNotificationAsync(EventCompany company, Event evt, string? cancellationComment, bool isNonParticipation)
     {
         SentAdminCancellationNotifications.Add((company, evt, isNonParticipation));
+        return Task.CompletedTask;
+    }
+
+    public Task SendGuestRegistrationConfirmationAsync(Registration guestRegistration, Registration brokerRegistration)
+    {
+        SentGuestConfirmations.Add((guestRegistration, brokerRegistration));
         return Task.CompletedTask;
     }
 }

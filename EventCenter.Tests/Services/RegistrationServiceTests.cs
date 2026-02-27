@@ -4,6 +4,7 @@ using EventCenter.Web.Domain.Enums;
 using EventCenter.Web.Infrastructure.Email;
 using EventCenter.Web.Services;
 using EventCenter.Tests.Helpers;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using Moq;
 using Xunit;
@@ -416,5 +417,681 @@ public class RegistrationServiceTests : IDisposable
             x => x.SendRegistrationConfirmationAsync(It.IsAny<Registration>()),
             Times.Once
         );
+    }
+
+    [Fact]
+    public async Task RegisterGuestAsync_ValidGuest_ReturnsSuccess()
+    {
+        // Arrange
+        var evt = new Event
+        {
+            Title = "Test Event",
+            Location = "Test Location",
+            StartDateUtc = DateTime.SpecifyKind(DateTime.UtcNow.AddDays(7), DateTimeKind.Utc),
+            EndDateUtc = DateTime.SpecifyKind(DateTime.UtcNow.AddDays(8), DateTimeKind.Utc),
+            RegistrationDeadlineUtc = DateTime.SpecifyKind(DateTime.UtcNow.AddDays(5), DateTimeKind.Utc),
+            MaxCapacity = 10,
+            MaxCompanions = 2,
+            IsPublished = true
+        };
+        _context.Events.Add(evt);
+        await _context.SaveChangesAsync();
+
+        var agendaItem = new EventAgendaItem
+        {
+            EventId = evt.Id,
+            Title = "Agenda 1",
+            StartDateTimeUtc = evt.StartDateUtc,
+            EndDateTimeUtc = evt.StartDateUtc.AddHours(1),
+            CostForMakler = 50.00m,
+            CostForGuest = 30.00m,
+            MaklerCanParticipate = true,
+            GuestsCanParticipate = true
+        };
+        _context.AgendaItems.Add(agendaItem);
+        await _context.SaveChangesAsync();
+
+        // Create broker registration
+        var brokerResult = await _service.RegisterMaklerAsync(
+            evt.Id,
+            "broker@example.com",
+            "Max",
+            "Broker",
+            null,
+            null,
+            new List<int> { agendaItem.Id }
+        );
+
+        // Act
+        var guestResult = await _service.RegisterGuestAsync(
+            brokerResult.RegistrationId!.Value,
+            "Frau",
+            "Anna",
+            "Guest",
+            "guest@example.com",
+            "Ehepartner",
+            new List<int> { agendaItem.Id }
+        );
+
+        // Assert
+        Assert.True(guestResult.Success, $"Guest registration failed: {guestResult.ErrorMessage}");
+        Assert.NotNull(guestResult.GuestRegistrationId);
+        Assert.Null(guestResult.ErrorMessage);
+
+        var guestRegistration = await _context.Registrations.FindAsync(guestResult.GuestRegistrationId);
+        Assert.NotNull(guestRegistration);
+        Assert.Equal(RegistrationType.Guest, guestRegistration.RegistrationType);
+        Assert.Equal(brokerResult.RegistrationId, guestRegistration.ParentRegistrationId);
+        Assert.Equal("Frau", guestRegistration.Salutation);
+        Assert.Equal("Ehepartner", guestRegistration.RelationshipType);
+    }
+
+    [Fact]
+    public async Task RegisterGuestAsync_LimitReached_ReturnsError()
+    {
+        // Arrange
+        var evt = new Event
+        {
+            Title = "Test Event",
+            Location = "Test Location",
+            StartDateUtc = DateTime.SpecifyKind(DateTime.UtcNow.AddDays(7), DateTimeKind.Utc),
+            EndDateUtc = DateTime.SpecifyKind(DateTime.UtcNow.AddDays(8), DateTimeKind.Utc),
+            RegistrationDeadlineUtc = DateTime.SpecifyKind(DateTime.UtcNow.AddDays(5), DateTimeKind.Utc),
+            MaxCapacity = 10,
+            MaxCompanions = 1,
+            IsPublished = true
+        };
+        _context.Events.Add(evt);
+        await _context.SaveChangesAsync();
+
+        var agendaItem = new EventAgendaItem
+        {
+            EventId = evt.Id,
+            Title = "Agenda 1",
+            StartDateTimeUtc = evt.StartDateUtc,
+            EndDateTimeUtc = evt.StartDateUtc.AddHours(1),
+            CostForMakler = 50.00m,
+            CostForGuest = 30.00m,
+            GuestsCanParticipate = true
+        };
+        _context.AgendaItems.Add(agendaItem);
+        await _context.SaveChangesAsync();
+
+        // Create broker registration
+        var brokerResult = await _service.RegisterMaklerAsync(
+            evt.Id,
+            "broker@example.com",
+            "Max",
+            "Broker",
+            null,
+            null,
+            new List<int> { agendaItem.Id }
+        );
+
+        // Register first guest (should succeed)
+        var firstGuestResult = await _service.RegisterGuestAsync(
+            brokerResult.RegistrationId!.Value,
+            "Frau",
+            "Anna",
+            "Guest1",
+            "guest1@example.com",
+            "Ehepartner",
+            new List<int> { agendaItem.Id }
+        );
+        Assert.True(firstGuestResult.Success);
+
+        // Act - Register second guest (should fail due to limit)
+        var secondGuestResult = await _service.RegisterGuestAsync(
+            brokerResult.RegistrationId!.Value,
+            "Herr",
+            "Peter",
+            "Guest2",
+            "guest2@example.com",
+            "Kollege",
+            new List<int> { agendaItem.Id }
+        );
+
+        // Assert
+        Assert.False(secondGuestResult.Success);
+        Assert.Null(secondGuestResult.GuestRegistrationId);
+        Assert.Contains("Maximale Anzahl", secondGuestResult.ErrorMessage);
+    }
+
+    [Fact]
+    public async Task RegisterGuestAsync_BrokerNotFound_ReturnsError()
+    {
+        // Act
+        var result = await _service.RegisterGuestAsync(
+            999,
+            "Frau",
+            "Anna",
+            "Guest",
+            "guest@example.com",
+            "Ehepartner",
+            new List<int> { 1 }
+        );
+
+        // Assert
+        Assert.False(result.Success);
+        Assert.Null(result.GuestRegistrationId);
+        Assert.Contains("nicht gefunden", result.ErrorMessage);
+    }
+
+    [Fact]
+    public async Task RegisterGuestAsync_NonMaklerParent_ReturnsError()
+    {
+        // Arrange
+        var evt = new Event
+        {
+            Title = "Test Event",
+            Location = "Test Location",
+            StartDateUtc = DateTime.SpecifyKind(DateTime.UtcNow.AddDays(7), DateTimeKind.Utc),
+            EndDateUtc = DateTime.SpecifyKind(DateTime.UtcNow.AddDays(8), DateTimeKind.Utc),
+            RegistrationDeadlineUtc = DateTime.SpecifyKind(DateTime.UtcNow.AddDays(5), DateTimeKind.Utc),
+            MaxCapacity = 10,
+            MaxCompanions = 2,
+            IsPublished = true
+        };
+        _context.Events.Add(evt);
+        await _context.SaveChangesAsync();
+
+        // Create a company participant registration
+        var companyReg = new Registration
+        {
+            EventId = evt.Id,
+            RegistrationType = RegistrationType.CompanyParticipant,
+            FirstName = "Company",
+            LastName = "User",
+            Email = "company@example.com",
+            RegistrationDateUtc = DateTime.UtcNow,
+            IsConfirmed = true
+        };
+        _context.Registrations.Add(companyReg);
+        await _context.SaveChangesAsync();
+
+        // Act
+        var result = await _service.RegisterGuestAsync(
+            companyReg.Id,
+            "Frau",
+            "Anna",
+            "Guest",
+            "guest@example.com",
+            "Ehepartner",
+            new List<int> { 1 }
+        );
+
+        // Assert
+        Assert.False(result.Success);
+        Assert.Contains("Nur Makler", result.ErrorMessage);
+    }
+
+    [Fact]
+    public async Task RegisterGuestAsync_DeadlinePassed_ReturnsError()
+    {
+        // Arrange
+        var evt = new Event
+        {
+            Title = "Test Event",
+            Location = "Test Location",
+            StartDateUtc = DateTime.SpecifyKind(DateTime.UtcNow.AddDays(7), DateTimeKind.Utc),
+            EndDateUtc = DateTime.SpecifyKind(DateTime.UtcNow.AddDays(8), DateTimeKind.Utc),
+            RegistrationDeadlineUtc = DateTime.SpecifyKind(DateTime.UtcNow.AddDays(5), DateTimeKind.Utc),
+            MaxCapacity = 10,
+            MaxCompanions = 2,
+            IsPublished = true
+        };
+        _context.Events.Add(evt);
+        await _context.SaveChangesAsync();
+
+        // Create broker registration
+        var brokerReg = new Registration
+        {
+            EventId = evt.Id,
+            RegistrationType = RegistrationType.Makler,
+            FirstName = "Max",
+            LastName = "Broker",
+            Email = "broker@example.com",
+            RegistrationDateUtc = DateTime.UtcNow,
+            IsConfirmed = true
+        };
+        _context.Registrations.Add(brokerReg);
+        await _context.SaveChangesAsync();
+
+        // Modify event to have past deadline
+        evt.RegistrationDeadlineUtc = DateTime.SpecifyKind(DateTime.UtcNow.AddDays(-1), DateTimeKind.Utc);
+        await _context.SaveChangesAsync();
+
+        // Act
+        var result = await _service.RegisterGuestAsync(
+            brokerReg.Id,
+            "Frau",
+            "Anna",
+            "Guest",
+            "guest@example.com",
+            "Ehepartner",
+            new List<int> { 1 }
+        );
+
+        // Assert
+        Assert.False(result.Success);
+        Assert.Contains("Anmeldung nicht möglich", result.ErrorMessage);
+    }
+
+    [Fact]
+    public async Task RegisterGuestAsync_InvalidAgendaItems_ReturnsError()
+    {
+        // Arrange
+        var evt = new Event
+        {
+            Title = "Test Event",
+            Location = "Test Location",
+            StartDateUtc = DateTime.SpecifyKind(DateTime.UtcNow.AddDays(7), DateTimeKind.Utc),
+            EndDateUtc = DateTime.SpecifyKind(DateTime.UtcNow.AddDays(8), DateTimeKind.Utc),
+            RegistrationDeadlineUtc = DateTime.SpecifyKind(DateTime.UtcNow.AddDays(5), DateTimeKind.Utc),
+            MaxCapacity = 10,
+            MaxCompanions = 2,
+            IsPublished = true
+        };
+        _context.Events.Add(evt);
+        await _context.SaveChangesAsync();
+
+        var agendaItem = new EventAgendaItem
+        {
+            EventId = evt.Id,
+            Title = "Agenda 1",
+            StartDateTimeUtc = evt.StartDateUtc,
+            EndDateTimeUtc = evt.StartDateUtc.AddHours(1),
+            CostForMakler = 50.00m,
+            CostForGuest = 30.00m,
+            MaklerCanParticipate = true,
+            GuestsCanParticipate = false  // Guests cannot participate
+        };
+        _context.AgendaItems.Add(agendaItem);
+        await _context.SaveChangesAsync();
+
+        // Create broker registration
+        var brokerResult = await _service.RegisterMaklerAsync(
+            evt.Id,
+            "broker@example.com",
+            "Max",
+            "Broker",
+            null,
+            null,
+            new List<int> { agendaItem.Id }
+        );
+
+        // Act
+        var result = await _service.RegisterGuestAsync(
+            brokerResult.RegistrationId!.Value,
+            "Frau",
+            "Anna",
+            "Guest",
+            "guest@example.com",
+            "Ehepartner",
+            new List<int> { agendaItem.Id }  // Try to select item where GuestsCanParticipate = false
+        );
+
+        // Assert
+        Assert.False(result.Success);
+        Assert.Contains("Ungültige Agendapunkt-Auswahl", result.ErrorMessage);
+    }
+
+    [Fact]
+    public async Task RegisterGuestAsync_CreatesRegistrationAgendaItems()
+    {
+        // Arrange
+        var evt = new Event
+        {
+            Title = "Test Event",
+            Location = "Test Location",
+            StartDateUtc = DateTime.SpecifyKind(DateTime.UtcNow.AddDays(7), DateTimeKind.Utc),
+            EndDateUtc = DateTime.SpecifyKind(DateTime.UtcNow.AddDays(8), DateTimeKind.Utc),
+            RegistrationDeadlineUtc = DateTime.SpecifyKind(DateTime.UtcNow.AddDays(5), DateTimeKind.Utc),
+            MaxCapacity = 10,
+            MaxCompanions = 2,
+            IsPublished = true
+        };
+        _context.Events.Add(evt);
+        await _context.SaveChangesAsync();
+
+        var agendaItem1 = new EventAgendaItem
+        {
+            EventId = evt.Id,
+            Title = "Agenda 1",
+            StartDateTimeUtc = evt.StartDateUtc,
+            EndDateTimeUtc = evt.StartDateUtc.AddHours(1),
+            CostForMakler = 50.00m,
+            CostForGuest = 30.00m,
+            MaklerCanParticipate = true,
+            GuestsCanParticipate = true
+        };
+        var agendaItem2 = new EventAgendaItem
+        {
+            EventId = evt.Id,
+            Title = "Agenda 2",
+            StartDateTimeUtc = evt.StartDateUtc.AddHours(2),
+            EndDateTimeUtc = evt.StartDateUtc.AddHours(3),
+            CostForMakler = 60.00m,
+            CostForGuest = 40.00m,
+            MaklerCanParticipate = true,
+            GuestsCanParticipate = true
+        };
+        _context.AgendaItems.AddRange(agendaItem1, agendaItem2);
+        await _context.SaveChangesAsync();
+
+        // Create broker registration
+        var brokerResult = await _service.RegisterMaklerAsync(
+            evt.Id,
+            "broker@example.com",
+            "Max",
+            "Broker",
+            null,
+            null,
+            new List<int> { agendaItem1.Id }
+        );
+
+        // Act
+        var guestResult = await _service.RegisterGuestAsync(
+            brokerResult.RegistrationId!.Value,
+            "Frau",
+            "Anna",
+            "Guest",
+            "guest@example.com",
+            "Ehepartner",
+            new List<int> { agendaItem1.Id, agendaItem2.Id }
+        );
+
+        // Assert
+        Assert.True(guestResult.Success, $"Guest registration failed: {guestResult.ErrorMessage}");
+
+        // Small delay to allow fire-and-forget email to complete
+        await Task.Delay(100);
+
+        var registrationAgendaItems = await _context.Set<RegistrationAgendaItem>()
+            .Where(rai => rai.RegistrationId == guestResult.GuestRegistrationId!.Value)
+            .ToListAsync();
+
+        Assert.Equal(2, registrationAgendaItems.Count);
+        Assert.Contains(registrationAgendaItems, rai => rai.AgendaItemId == agendaItem1.Id);
+        Assert.Contains(registrationAgendaItems, rai => rai.AgendaItemId == agendaItem2.Id);
+    }
+
+    [Fact]
+    public async Task RegisterGuestAsync_SetsCorrectFields()
+    {
+        // Arrange
+        var evt = new Event
+        {
+            Title = "Test Event",
+            Location = "Test Location",
+            StartDateUtc = DateTime.SpecifyKind(DateTime.UtcNow.AddDays(7), DateTimeKind.Utc),
+            EndDateUtc = DateTime.SpecifyKind(DateTime.UtcNow.AddDays(8), DateTimeKind.Utc),
+            RegistrationDeadlineUtc = DateTime.SpecifyKind(DateTime.UtcNow.AddDays(5), DateTimeKind.Utc),
+            MaxCapacity = 10,
+            MaxCompanions = 2,
+            IsPublished = true
+        };
+        _context.Events.Add(evt);
+        await _context.SaveChangesAsync();
+
+        var agendaItem = new EventAgendaItem
+        {
+            EventId = evt.Id,
+            Title = "Agenda 1",
+            StartDateTimeUtc = evt.StartDateUtc,
+            EndDateTimeUtc = evt.StartDateUtc.AddHours(1),
+            CostForMakler = 50.00m,
+            CostForGuest = 30.00m,
+            MaklerCanParticipate = true,
+            GuestsCanParticipate = true
+        };
+        _context.AgendaItems.Add(agendaItem);
+        await _context.SaveChangesAsync();
+
+        // Create broker registration
+        var brokerResult = await _service.RegisterMaklerAsync(
+            evt.Id,
+            "broker@example.com",
+            "Max",
+            "Broker",
+            null,
+            null,
+            new List<int> { agendaItem.Id }
+        );
+
+        // Act
+        var guestResult = await _service.RegisterGuestAsync(
+            brokerResult.RegistrationId!.Value,
+            "Divers",
+            "Alex",
+            "Guest",
+            "alex@example.com",
+            "Freund",
+            new List<int> { agendaItem.Id }
+        );
+
+        // Assert
+        Assert.True(guestResult.Success, $"Guest registration failed: {guestResult.ErrorMessage}");
+
+        var guestRegistration = await _context.Registrations.FindAsync(guestResult.GuestRegistrationId);
+        Assert.NotNull(guestRegistration);
+        Assert.Equal("Divers", guestRegistration.Salutation);
+        Assert.Equal("Alex", guestRegistration.FirstName);
+        Assert.Equal("Guest", guestRegistration.LastName);
+        Assert.Equal("alex@example.com", guestRegistration.Email);
+        Assert.Equal("Freund", guestRegistration.RelationshipType);
+        Assert.Equal(brokerResult.RegistrationId, guestRegistration.ParentRegistrationId);
+        Assert.Equal(RegistrationType.Guest, guestRegistration.RegistrationType);
+        Assert.True(guestRegistration.IsConfirmed);
+    }
+
+    [Fact]
+    public async Task RegisterGuestAsync_Success_SendsEmail()
+    {
+        // Arrange
+        var evt = new Event
+        {
+            Title = "Test Event",
+            Location = "Test Location",
+            StartDateUtc = DateTime.SpecifyKind(DateTime.UtcNow.AddDays(7), DateTimeKind.Utc),
+            EndDateUtc = DateTime.SpecifyKind(DateTime.UtcNow.AddDays(8), DateTimeKind.Utc),
+            RegistrationDeadlineUtc = DateTime.SpecifyKind(DateTime.UtcNow.AddDays(5), DateTimeKind.Utc),
+            MaxCapacity = 10,
+            MaxCompanions = 2,
+            IsPublished = true
+        };
+        _context.Events.Add(evt);
+        await _context.SaveChangesAsync();
+
+        var agendaItem = new EventAgendaItem
+        {
+            EventId = evt.Id,
+            Title = "Agenda 1",
+            StartDateTimeUtc = evt.StartDateUtc,
+            EndDateTimeUtc = evt.StartDateUtc.AddHours(1),
+            CostForMakler = 50.00m,
+            CostForGuest = 30.00m,
+            MaklerCanParticipate = true,
+            GuestsCanParticipate = true
+        };
+        _context.AgendaItems.Add(agendaItem);
+        await _context.SaveChangesAsync();
+
+        // Create broker registration
+        var brokerResult = await _service.RegisterMaklerAsync(
+            evt.Id,
+            "broker@example.com",
+            "Max",
+            "Broker",
+            null,
+            null,
+            new List<int> { agendaItem.Id }
+        );
+
+        // Act
+        var guestResult = await _service.RegisterGuestAsync(
+            brokerResult.RegistrationId!.Value,
+            "Frau",
+            "Anna",
+            "Guest",
+            "guest@example.com",
+            "Ehepartner",
+            new List<int> { agendaItem.Id }
+        );
+
+        // Assert
+        Assert.True(guestResult.Success, $"Guest registration failed: {guestResult.ErrorMessage}");
+
+        // Verify email sender was called (with small delay for fire-and-forget)
+        await Task.Delay(500);
+        _mockEmailSender.Verify(
+            x => x.SendGuestRegistrationConfirmationAsync(It.IsAny<Registration>(), It.IsAny<Registration>()),
+            Times.Once
+        );
+    }
+
+    [Fact]
+    public async Task GetGuestCountAsync_ReturnsCorrectCount()
+    {
+        // Arrange
+        var evt = new Event
+        {
+            Title = "Test Event",
+            Location = "Test Location",
+            StartDateUtc = DateTime.SpecifyKind(DateTime.UtcNow.AddDays(7), DateTimeKind.Utc),
+            EndDateUtc = DateTime.SpecifyKind(DateTime.UtcNow.AddDays(8), DateTimeKind.Utc),
+            RegistrationDeadlineUtc = DateTime.SpecifyKind(DateTime.UtcNow.AddDays(5), DateTimeKind.Utc),
+            MaxCapacity = 10,
+            MaxCompanions = 2,
+            IsPublished = true
+        };
+        _context.Events.Add(evt);
+        await _context.SaveChangesAsync();
+
+        // Create broker registration
+        var brokerReg = new Registration
+        {
+            EventId = evt.Id,
+            RegistrationType = RegistrationType.Makler,
+            FirstName = "Max",
+            LastName = "Broker",
+            Email = "broker@example.com",
+            RegistrationDateUtc = DateTime.UtcNow,
+            IsConfirmed = true
+        };
+        _context.Registrations.Add(brokerReg);
+        await _context.SaveChangesAsync();
+
+        // Create active guest
+        var activeGuest = new Registration
+        {
+            EventId = evt.Id,
+            ParentRegistrationId = brokerReg.Id,
+            RegistrationType = RegistrationType.Guest,
+            FirstName = "Anna",
+            LastName = "Guest1",
+            Email = "guest1@example.com",
+            RegistrationDateUtc = DateTime.UtcNow,
+            IsConfirmed = true,
+            IsCancelled = false
+        };
+
+        // Create cancelled guest
+        var cancelledGuest = new Registration
+        {
+            EventId = evt.Id,
+            ParentRegistrationId = brokerReg.Id,
+            RegistrationType = RegistrationType.Guest,
+            FirstName = "Peter",
+            LastName = "Guest2",
+            Email = "guest2@example.com",
+            RegistrationDateUtc = DateTime.UtcNow,
+            IsConfirmed = true,
+            IsCancelled = true
+        };
+
+        _context.Registrations.AddRange(activeGuest, cancelledGuest);
+        await _context.SaveChangesAsync();
+
+        // Act
+        var count = await _service.GetGuestCountAsync(brokerReg.Id);
+
+        // Assert
+        Assert.Equal(1, count); // Only active guest counted
+    }
+
+    [Fact]
+    public async Task GetGuestRegistrationsAsync_ReturnsGuestsWithDetails()
+    {
+        // Arrange
+        var evt = new Event
+        {
+            Title = "Test Event",
+            Location = "Test Location",
+            StartDateUtc = DateTime.SpecifyKind(DateTime.UtcNow.AddDays(7), DateTimeKind.Utc),
+            EndDateUtc = DateTime.SpecifyKind(DateTime.UtcNow.AddDays(8), DateTimeKind.Utc),
+            RegistrationDeadlineUtc = DateTime.SpecifyKind(DateTime.UtcNow.AddDays(5), DateTimeKind.Utc),
+            MaxCapacity = 10,
+            MaxCompanions = 2,
+            IsPublished = true
+        };
+        _context.Events.Add(evt);
+        await _context.SaveChangesAsync();
+
+        var agendaItem = new EventAgendaItem
+        {
+            EventId = evt.Id,
+            Title = "Agenda 1",
+            StartDateTimeUtc = evt.StartDateUtc,
+            EndDateTimeUtc = evt.StartDateUtc.AddHours(1),
+            CostForMakler = 50.00m,
+            CostForGuest = 30.00m,
+            MaklerCanParticipate = true,
+            GuestsCanParticipate = true
+        };
+        _context.AgendaItems.Add(agendaItem);
+        await _context.SaveChangesAsync();
+
+        // Create broker registration
+        var brokerResult = await _service.RegisterMaklerAsync(
+            evt.Id,
+            "broker@example.com",
+            "Max",
+            "Broker",
+            null,
+            null,
+            new List<int> { agendaItem.Id }
+        );
+
+        // Create two guests
+        var guest1Result = await _service.RegisterGuestAsync(
+            brokerResult.RegistrationId!.Value,
+            "Frau",
+            "Anna",
+            "Guest1",
+            "guest1@example.com",
+            "Ehepartner",
+            new List<int> { agendaItem.Id }
+        );
+
+        var guest2Result = await _service.RegisterGuestAsync(
+            brokerResult.RegistrationId!.Value,
+            "Herr",
+            "Peter",
+            "Guest2",
+            "guest2@example.com",
+            "Kollege",
+            new List<int> { agendaItem.Id }
+        );
+
+        Assert.True(guest1Result.Success, $"Guest 1 registration failed: {guest1Result.ErrorMessage}");
+        Assert.True(guest2Result.Success, $"Guest 2 registration failed: {guest2Result.ErrorMessage}");
+
+        // Act
+        var guests = await _service.GetGuestRegistrationsAsync(brokerResult.RegistrationId!.Value);
+
+        // Assert
+        Assert.Equal(2, guests.Count);
+        Assert.All(guests, g => Assert.NotEmpty(g.RegistrationAgendaItems));
     }
 }
