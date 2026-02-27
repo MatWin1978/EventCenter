@@ -34,11 +34,26 @@ public class EventCompanyConfiguration : IEntityTypeConfiguration<EventCompany>
 
         builder.Property(c => c.InvitationSentUtc);
 
+        // Phase 04 fields
+        builder.Property(c => c.Status)
+            .HasConversion<string>()
+            .HasMaxLength(20);
+
+        builder.Property(c => c.PercentageDiscount)
+            .HasPrecision(5, 2);
+
+        builder.Property(c => c.PersonalMessage)
+            .HasMaxLength(2000);
+
+        builder.Property(c => c.ExpiresAtUtc);
+
         // Index on EventId for faster lookup
         builder.HasIndex(c => c.EventId);
 
-        // Index on InvitationCode for invitation lookups
-        builder.HasIndex(c => c.InvitationCode);
+        // Unique index on InvitationCode (when not null)
+        builder.HasIndex(c => c.InvitationCode)
+            .IsUnique()
+            .HasFilter("[InvitationCode] IS NOT NULL");
 
         // Relationships
         builder.HasMany(c => c.Registrations)

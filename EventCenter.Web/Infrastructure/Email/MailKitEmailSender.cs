@@ -182,33 +182,12 @@ public class MailKitEmailSender : IEmailSender
         if (!string.IsNullOrWhiteSpace(personalMessage))
         {
             personalMessageHtml = $@"
-        <div style=""background-color: #fff3cd; padding: 15px; margin: 20px 0; border-radius: 5px; border-left: 4px solid #ffc107;"">
-            <p style=""margin: 0;"">{personalMessage.Replace("\n", "<br/>")}</p>
+        <div style=""background-color: #f8f9fa; padding: 15px; margin: 20px 0; border-radius: 5px; border-left: 4px solid #007bff;"">
+            <p style=""margin: 0; font-style: italic;"">{personalMessage.Replace("\n", "<br/>")}</p>
         </div>";
         }
 
-        var agendaItemsHtml = string.Empty;
-        if (invitation.AgendaItemPrices.Any())
-        {
-            agendaItemsHtml = "<h3 style=\"color: #333; margin-top: 20px;\">Verfügbare Agendapunkte mit Sonderpreisen:</h3><ul style=\"list-style: none; padding: 0;\">";
-
-            foreach (var agendaPrice in invitation.AgendaItemPrices)
-            {
-                var item = agendaPrice.AgendaItem;
-                var price = agendaPrice.CustomPrice ?? item.CostForGuest;
-
-                var itemStart = TimeZoneHelper.FormatDateTimeCet(item.StartDateTimeUtc, "dd.MM.yyyy HH:mm");
-                var itemEnd = TimeZoneHelper.FormatDateTimeCet(item.EndDateTimeUtc, "HH:mm");
-
-                agendaItemsHtml += $@"
-                    <li style=""margin: 10px 0; padding: 10px; background-color: #f8f9fa; border-left: 3px solid #28a745;"">
-                        <strong>{item.Title}</strong><br/>
-                        <span style=""color: #666;"">Zeit: {itemStart} - {itemEnd}</span><br/>
-                        <span style=""color: #28a745; font-weight: bold;"">Ihr Preis: {price:C}</span>
-                    </li>";
-            }
-            agendaItemsHtml += "</ul>";
-        }
+        var pricingSummaryHtml = BuildPricingSummaryHtml(invitation);
 
         return $@"
 <!DOCTYPE html>
@@ -219,8 +198,8 @@ public class MailKitEmailSender : IEmailSender
     <title>Veranstaltungseinladung</title>
 </head>
 <body style=""font-family: Arial, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px;"">
-    <div style=""background-color: #28a745; color: white; padding: 20px; text-align: center; border-radius: 5px 5px 0 0;"">
-        <h1 style=""margin: 0;"">Exklusive Einladung</h1>
+    <div style=""background-color: #007bff; color: white; padding: 20px; text-align: center; border-radius: 5px 5px 0 0;"">
+        <h1 style=""margin: 0;"">Sie sind eingeladen</h1>
     </div>
 
     <div style=""background-color: #ffffff; padding: 20px; border: 1px solid #dee2e6; border-radius: 0 0 5px 5px;"">
@@ -229,17 +208,17 @@ public class MailKitEmailSender : IEmailSender
         <p>wir laden Sie herzlich zu unserer Veranstaltung ein:</p>
 
         <div style=""background-color: #f8f9fa; padding: 15px; margin: 20px 0; border-radius: 5px;"">
-            <h2 style=""color: #28a745; margin-top: 0;"">{evt.Title}</h2>
+            <h2 style=""color: #007bff; margin-top: 0;"">{evt.Title}</h2>
             <p style=""margin: 5px 0;""><strong>Datum:</strong> {startDate} - {endDate}</p>
             <p style=""margin: 5px 0;""><strong>Ort:</strong> {evt.Location}</p>
         </div>
 
         {personalMessageHtml}
 
-        {agendaItemsHtml}
+        {pricingSummaryHtml}
 
         <div style=""text-align: center; margin: 30px 0;"">
-            <a href=""{invitationLink}"" style=""display: inline-block; background-color: #28a745; color: white; padding: 15px 30px; text-decoration: none; border-radius: 5px; font-weight: bold;"">
+            <a href=""{invitationLink}"" style=""display: inline-block; background-color: #007bff; color: white; padding: 15px 30px; text-decoration: none; border-radius: 5px; font-weight: bold;"">
                 Jetzt anmelden
             </a>
         </div>
@@ -257,5 +236,54 @@ public class MailKitEmailSender : IEmailSender
     </div>
 </body>
 </html>";
+    }
+
+    private string BuildPricingSummaryHtml(EventCompany invitation)
+    {
+        if (!invitation.AgendaItemPrices.Any())
+        {
+            return string.Empty;
+        }
+
+        var culture = new System.Globalization.CultureInfo("de-DE");
+        var tableRows = string.Empty;
+
+        foreach (var agendaPrice in invitation.AgendaItemPrices)
+        {
+            var item = agendaPrice.AgendaItem;
+            var basePrice = item.CostForMakler;
+            var customPrice = agendaPrice.CustomPrice ?? basePrice;
+            var itemStart = TimeZoneHelper.FormatDateTimeCet(item.StartDateTimeUtc, "dd.MM.yyyy HH:mm");
+            var itemEnd = TimeZoneHelper.FormatDateTimeCet(item.EndDateTimeUtc, "HH:mm");
+
+            tableRows += $@"
+                <tr>
+                    <td style=""padding: 10px; border-bottom: 1px solid #dee2e6;"">
+                        <strong>{item.Title}</strong><br/>
+                        <span style=""color: #666; font-size: 13px;"">Zeit: {itemStart} - {itemEnd}</span>
+                    </td>
+                    <td style=""padding: 10px; border-bottom: 1px solid #dee2e6; text-align: right; color: #666;"">
+                        {basePrice.ToString("C", culture)}
+                    </td>
+                    <td style=""padding: 10px; border-bottom: 1px solid #dee2e6; text-align: right; font-weight: bold; color: #007bff;"">
+                        {customPrice.ToString("C", culture)}
+                    </td>
+                </tr>";
+        }
+
+        return $@"
+        <h3 style=""color: #333; margin-top: 20px;"">Preisübersicht für Ihre Firma:</h3>
+        <table style=""width: 100%; border-collapse: collapse; margin: 15px 0;"">
+            <thead>
+                <tr style=""background-color: #f8f9fa;"">
+                    <th style=""padding: 10px; text-align: left; border-bottom: 2px solid #dee2e6;"">Agendapunkt</th>
+                    <th style=""padding: 10px; text-align: right; border-bottom: 2px solid #dee2e6;"">Basispreis</th>
+                    <th style=""padding: 10px; text-align: right; border-bottom: 2px solid #dee2e6;"">Ihr Preis</th>
+                </tr>
+            </thead>
+            <tbody>
+                {tableRows}
+            </tbody>
+        </table>";
     }
 }
