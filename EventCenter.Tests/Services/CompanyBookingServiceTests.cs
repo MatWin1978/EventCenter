@@ -5,6 +5,7 @@ using EventCenter.Web.Infrastructure.Email;
 using EventCenter.Web.Models;
 using EventCenter.Web.Services;
 using EventCenter.Tests.Helpers;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
 using Moq;
@@ -55,9 +56,10 @@ public class CompanyBookingServiceTests : IDisposable
         {
             Event = _testEvent,
             Title = "Workshop A",
-            StartDateUtc = DateTime.UtcNow.AddDays(30),
-            EndDateUtc = DateTime.UtcNow.AddDays(30).AddHours(2),
+            StartDateTimeUtc = DateTime.UtcNow.AddDays(30),
+            EndDateTimeUtc = DateTime.UtcNow.AddDays(30).AddHours(2),
             CostForMakler = 100m,
+            CostForGuest = 120m,
             IsMandatory = false
         };
 
@@ -65,9 +67,10 @@ public class CompanyBookingServiceTests : IDisposable
         {
             Event = _testEvent,
             Title = "Workshop B",
-            StartDateUtc = DateTime.UtcNow.AddDays(30).AddHours(2),
-            EndDateUtc = DateTime.UtcNow.AddDays(30).AddHours(4),
+            StartDateTimeUtc = DateTime.UtcNow.AddDays(30).AddHours(2),
+            EndDateTimeUtc = DateTime.UtcNow.AddDays(30).AddHours(4),
             CostForMakler = 150m,
+            CostForGuest = 180m,
             IsMandatory = false
         };
 
@@ -81,7 +84,7 @@ public class CompanyBookingServiceTests : IDisposable
             Price = 25m
         };
 
-        _testEvent.Options.Add(extraOption);
+        _testEvent.EventOptions.Add(extraOption);
 
         _context.Events.Add(_testEvent);
         _context.SaveChanges();
@@ -122,7 +125,7 @@ public class CompanyBookingServiceTests : IDisposable
 
     public void Dispose()
     {
-        _context.Database.CloseConnection();
+        _context.Database.EnsureDeleted();
         _context.Dispose();
     }
 
@@ -144,7 +147,7 @@ public class CompanyBookingServiceTests : IDisposable
         Assert.Null(errorMessage);
         Assert.NotNull(company.Event);
         Assert.NotEmpty(company.Event.AgendaItems);
-        Assert.NotEmpty(company.Event.Options);
+        Assert.NotEmpty(company.Event.EventOptions);
     }
 
     [Fact]
@@ -257,7 +260,7 @@ public class CompanyBookingServiceTests : IDisposable
                     SelectedAgendaItemIds = new List<int> { agendaItems[0].Id }
                 }
             },
-            SelectedExtraOptionIds = new List<int> { _testEvent.Options.First().Id }
+            SelectedExtraOptionIds = new List<int> { _testEvent.EventOptions.First().Id }
         };
 
         // Act
@@ -299,13 +302,16 @@ public class CompanyBookingServiceTests : IDisposable
             .ToList();
         Assert.Single(janeAgendaItems);
 
-        // Verify email was called (fire-and-forget, so we just verify it was setup to send)
+        // Fire-and-forget email happens asynchronously, so we need to wait briefly
+        await Task.Delay(100);
+
+        // Verify email was called
         _emailSenderMock.Verify(
             e => e.SendAdminBookingNotificationAsync(
                 It.IsAny<EventCompany>(),
                 It.IsAny<Event>(),
                 It.IsAny<List<ParticipantModel>>()),
-            Times.Never); // Fire-and-forget won't be captured in sync test
+            Times.Once());
     }
 
     [Fact]
@@ -513,7 +519,7 @@ public class CompanyBookingServiceTests : IDisposable
             .Include(ec => ec.AgendaItemPrices)
             .FirstAsync(ec => ec.Id == _testInvitation.Id);
 
-        var agendaItems = await _context.EventAgendaItems
+        var agendaItems = await _context.AgendaItems
             .Where(ai => ai.EventId == _testEvent.Id)
             .ToListAsync();
 
@@ -564,7 +570,7 @@ public class CompanyBookingServiceTests : IDisposable
         _context.EventCompanies.Add(newInvitation);
         _context.SaveChanges();
 
-        var agendaItems = await _context.EventAgendaItems
+        var agendaItems = await _context.AgendaItems
             .Where(ai => ai.EventId == _testEvent.Id)
             .ToListAsync();
 
