@@ -174,4 +174,160 @@ public class RegistrationService
     {
         return selectedItems.Sum(item => item.CostForMakler);
     }
+
+    /// <summary>
+    /// Registers a guest (companion) for an event, linked to a broker's registration.
+    /// Validates broker registration, companion limits, and agenda item participation rules.
+    /// </summary>
+    public async Task<(bool Success, int? GuestRegistrationId, string? ErrorMessage)> RegisterGuestAsync(
+        int brokerRegistrationId,
+        string salutation,
+        string firstName,
+        string lastName,
+        string email,
+        string relationshipType,
+        List<int> selectedAgendaItemIds)
+    {
+        using var transaction = await _context.Database.BeginTransactionAsync();
+
+        try
+        {
+            // Load broker registration with event details
+            var brokerRegistration = await _context.Registrations
+                .Include(r => r.Event)
+                    .ThenInclude(e => e.AgendaItems)
+                .Include(r => r.Event.Registrations)
+                .FirstOrDefaultAsync(r => r.Id == brokerRegistrationId);
+
+            if (brokerRegistration == null)
+            {
+                return (false, null, "Makler-Anmeldung nicht gefunden.");
+            }
+
+            // Verify broker registration is not cancelled
+            if (brokerRegistration.IsCancelled)
+            {
+                return (false, null, "Die Makler-Anmeldung wurde storniert.");
+            }
+
+            // Verify registration type is Makler
+            if (brokerRegistration.RegistrationType != RegistrationType.Makler)
+            {
+                return (false, null, "Nur Makler können Begleitpersonen anmelden.");
+            }
+
+            var evt = brokerRegistration.Event;
+
+            // Validate event state
+            var eventState = evt.GetCurrentState();
+            if (eventState != EventState.Public)
+            {
+                return (false, null, "Anmeldung nicht möglich - Frist abgelaufen.");
+            }
+
+            // Check companion limit
+            var currentGuestCount = await _context.Registrations
+                .CountAsync(r => r.ParentRegistrationId == brokerRegistrationId && !r.IsCancelled);
+
+            if (currentGuestCount >= evt.MaxCompanions)
+            {
+                return (false, null, $"Maximale Anzahl Begleitpersonen erreicht ({evt.MaxCompanions}).");
+            }
+
+            // Validate selected agenda items - only items where GuestsCanParticipate is true
+            if (selectedAgendaItemIds.Any())
+            {
+                var validAgendaItemIds = evt.AgendaItems
+                    .Where(ai => ai.GuestsCanParticipate)
+                    .Select(ai => ai.Id)
+                    .ToHashSet();
+
+                if (!selectedAgendaItemIds.All(id => validAgendaItemIds.Contains(id)))
+                {
+                    return (false, null, "Ungültige Agendapunkt-Auswahl für Begleitperson.");
+                }
+            }
+
+            // Create guest registration
+            var guestRegistration = new Registration
+            {
+                EventId = evt.Id,
+                ParentRegistrationId = brokerRegistrationId,
+                RegistrationType = RegistrationType.Guest,
+                Salutation = salutation,
+                FirstName = firstName,
+                LastName = lastName,
+                Email = email,
+                RelationshipType = relationshipType,
+                IsConfirmed = true,
+                RegistrationDateUtc = DateTime.UtcNow,
+                IsCancelled = false
+            };
+
+            _context.Registrations.Add(guestRegistration);
+            await _context.SaveChangesAsync();
+
+            // Create registration-agenda item links
+            foreach (var agendaItemId in selectedAgendaItemIds)
+            {
+                var registrationAgendaItem = new RegistrationAgendaItem
+                {
+                    RegistrationId = guestRegistration.Id,
+                    AgendaItemId = agendaItemId
+                };
+                _context.Set<RegistrationAgendaItem>().Add(registrationAgendaItem);
+            }
+
+            await _context.SaveChangesAsync();
+            await transaction.CommitAsync();
+
+            // Send confirmation email to broker (fire-and-forget with error handling)
+            _ = Task.Run(async () =>
+            {
+                try
+                {
+                    var guestWithDetails = await GetRegistrationWithDetailsAsync(guestRegistration.Id);
+                    var brokerWithDetails = await GetRegistrationWithDetailsAsync(brokerRegistrationId);
+                    if (guestWithDetails != null && brokerWithDetails != null)
+                    {
+                        await _emailSender.SendGuestRegistrationConfirmationAsync(guestWithDetails, brokerWithDetails);
+                    }
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogError(ex, "Failed to send guest registration confirmation email for guest registration {GuestRegistrationId}", guestRegistration.Id);
+                }
+            });
+
+            return (true, guestRegistration.Id, null);
+        }
+        catch (Exception ex)
+        {
+            await transaction.RollbackAsync();
+            _logger.LogError(ex, "Error during guest registration for broker registration {BrokerRegistrationId}", brokerRegistrationId);
+            return (false, null, "Ein Fehler ist aufgetreten. Bitte versuchen Sie es später erneut.");
+        }
+    }
+
+    /// <summary>
+    /// Gets the count of non-cancelled guest registrations for a broker.
+    /// </summary>
+    public async Task<int> GetGuestCountAsync(int brokerRegistrationId)
+    {
+        return await _context.Registrations
+            .CountAsync(r => r.ParentRegistrationId == brokerRegistrationId && !r.IsCancelled);
+    }
+
+    /// <summary>
+    /// Gets all guest registrations for a broker with agenda item details.
+    /// </summary>
+    public async Task<List<Registration>> GetGuestRegistrationsAsync(int brokerRegistrationId)
+    {
+        return await _context.Registrations
+            .Include(r => r.RegistrationAgendaItems)
+                .ThenInclude(rai => rai.AgendaItem)
+            .Where(r => r.ParentRegistrationId == brokerRegistrationId && !r.IsCancelled)
+            .OrderBy(r => r.RegistrationDateUtc)
+            .ToListAsync();
+    }
 }

@@ -513,4 +513,127 @@ public class MailKitEmailSender : IEmailSender
 </body>
 </html>";
     }
+
+    public async Task SendGuestRegistrationConfirmationAsync(Registration guestRegistration, Registration brokerRegistration)
+    {
+        try
+        {
+            var message = new MimeMessage();
+            message.From.Add(new MailboxAddress(_settings.SenderName, _settings.SenderEmail));
+            // Email is sent to the broker (per MAIL-02 decision)
+            message.To.Add(new MailboxAddress($"{brokerRegistration.FirstName} {brokerRegistration.LastName}", brokerRegistration.Email));
+            message.Subject = $"Anmeldebestätigung Begleitperson: {guestRegistration.Event.Title}";
+
+            var htmlBody = BuildGuestRegistrationHtmlBody(guestRegistration, brokerRegistration);
+            message.Body = new TextPart("html") { Text = htmlBody };
+
+            using var client = new SmtpClient();
+            await client.ConnectAsync(_settings.Host, _settings.Port, _settings.UseSsl);
+
+            // Authenticate if username is provided
+            if (!string.IsNullOrEmpty(_settings.Username))
+            {
+                await client.AuthenticateAsync(_settings.Username, _settings.Password);
+            }
+
+            await client.SendAsync(message);
+            await client.DisconnectAsync(true);
+
+            _logger.LogInformation(
+                "Successfully sent guest registration confirmation email to broker {BrokerEmail} for guest {GuestRegistrationId}",
+                brokerRegistration.Email,
+                guestRegistration.Id);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex,
+                "Failed to send guest registration confirmation email to broker {BrokerEmail} for guest {GuestRegistrationId}",
+                brokerRegistration.Email,
+                guestRegistration.Id);
+            throw;
+        }
+    }
+
+    private string BuildGuestRegistrationHtmlBody(Registration guestRegistration, Registration brokerRegistration)
+    {
+        var evt = guestRegistration.Event;
+        var startDate = TimeZoneHelper.FormatDateTimeCet(evt.StartDateUtc, "dd.MM.yyyy HH:mm");
+        var endDate = TimeZoneHelper.FormatDateTimeCet(evt.EndDateUtc, "dd.MM.yyyy HH:mm");
+
+        // Calculate total cost based on guest pricing
+        decimal totalCost = 0;
+        var agendaItemsHtml = string.Empty;
+
+        if (guestRegistration.RegistrationAgendaItems.Any())
+        {
+            agendaItemsHtml = "<h3 style=\"color: #333; margin-top: 20px;\">Ausgewählte Agendapunkte für Begleitperson:</h3><ul style=\"list-style: none; padding: 0;\">";
+
+            foreach (var regAgendaItem in guestRegistration.RegistrationAgendaItems)
+            {
+                var item = regAgendaItem.AgendaItem;
+                var cost = item.CostForGuest;
+                totalCost += cost;
+
+                var itemStart = TimeZoneHelper.FormatDateTimeCet(item.StartDateTimeUtc, "dd.MM.yyyy HH:mm");
+                var itemEnd = TimeZoneHelper.FormatDateTimeCet(item.EndDateTimeUtc, "HH:mm");
+
+                agendaItemsHtml += $@"
+                    <li style=""margin: 10px 0; padding: 10px; background-color: #f8f9fa; border-left: 3px solid #007bff;"">
+                        <strong>{item.Title}</strong><br/>
+                        <span style=""color: #666;"">Zeit: {itemStart} - {itemEnd}</span><br/>
+                        <span style=""color: #666;"">Kosten: {cost:C}</span>
+                    </li>";
+            }
+            agendaItemsHtml += "</ul>";
+        }
+
+        return $@"
+<!DOCTYPE html>
+<html lang=""de"">
+<head>
+    <meta charset=""UTF-8"">
+    <meta name=""viewport"" content=""width=device-width, initial-scale=1.0"">
+    <title>Anmeldebestätigung Begleitperson</title>
+</head>
+<body style=""font-family: Arial, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px;"">
+    <div style=""background-color: #007bff; color: white; padding: 20px; text-align: center; border-radius: 5px 5px 0 0;"">
+        <h1 style=""margin: 0;"">Anmeldebestätigung Begleitperson</h1>
+    </div>
+
+    <div style=""background-color: #ffffff; padding: 20px; border: 1px solid #dee2e6; border-radius: 0 0 5px 5px;"">
+        <p>Sehr geehrte(r) {brokerRegistration.FirstName} {brokerRegistration.LastName},</p>
+
+        <p>Die Anmeldung Ihrer Begleitperson wurde erfolgreich registriert:</p>
+
+        <div style=""background-color: #f8f9fa; padding: 15px; margin: 20px 0; border-radius: 5px;"">
+            <h2 style=""color: #007bff; margin-top: 0;"">{evt.Title}</h2>
+            <p style=""margin: 5px 0;""><strong>Datum:</strong> {startDate} - {endDate}</p>
+            <p style=""margin: 5px 0;""><strong>Ort:</strong> {evt.Location}</p>
+        </div>
+
+        <div style=""background-color: #e9ecef; padding: 15px; margin: 20px 0; border-radius: 5px;"">
+            <h3 style=""margin-top: 0; color: #333;"">Details zur Begleitperson</h3>
+            <p style=""margin: 5px 0;""><strong>Anrede:</strong> {guestRegistration.Salutation}</p>
+            <p style=""margin: 5px 0;""><strong>Name:</strong> {guestRegistration.FirstName} {guestRegistration.LastName}</p>
+            <p style=""margin: 5px 0;""><strong>E-Mail:</strong> {guestRegistration.Email}</p>
+            <p style=""margin: 5px 0;""><strong>Beziehungstyp:</strong> {guestRegistration.RelationshipType}</p>
+        </div>
+
+        {agendaItemsHtml}
+
+        {(totalCost > 0 ? $@"<div style=""background-color: #d1ecf1; padding: 15px; margin: 20px 0; border-radius: 5px; border-left: 4px solid #0c5460;"">
+            <strong>Gesamtkosten für Begleitperson:</strong> {totalCost:C}
+        </div>" : "")}
+
+        <p style=""margin-top: 30px;"">Wir freuen uns auf Ihre Teilnahme!</p>
+
+        <hr style=""border: none; border-top: 1px solid #dee2e6; margin: 30px 0;""/>
+
+        <p style=""color: #666; font-size: 12px; text-align: center;"">
+            Bei Fragen wenden Sie sich bitte an: {_settings.SenderEmail}
+        </p>
+    </div>
+</body>
+</html>";
+    }
 }
