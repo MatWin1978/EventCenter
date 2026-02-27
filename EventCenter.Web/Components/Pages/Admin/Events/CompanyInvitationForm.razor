@@ -1,0 +1,614 @@
+@page "/admin/events/{EventId:int}/companies/create"
+@page "/admin/events/{EventId:int}/companies/create-batch"
+@page "/admin/events/{EventId:int}/companies/edit/{InvitationId:int}"
+@attribute [Authorize(Policy = "AdminOnly")]
+@inject CompanyInvitationService CompanyInvitationService
+@inject EventService EventService
+@inject NavigationManager Navigation
+@using EventCenter.Web.Domain.Enums
+@using EventCenter.Web.Services
+@using EventCenter.Web.Models
+@using EventCenter.Web.Validators
+@using EventCenter.Web.Infrastructure.Helpers
+@using Blazored.FluentValidation
+
+<PageTitle>@pageTitle</PageTitle>
+
+<div class="container-fluid py-4">
+    @if (loading)
+    {
+        <div class="text-center py-5">
+            <div class="spinner-border text-primary" role="status">
+                <span class="visually-hidden">Lädt...</span>
+            </div>
+        </div>
+    }
+    else
+    {
+        <!-- Header -->
+        <div class="mb-4">
+            <nav aria-label="breadcrumb">
+                <ol class="breadcrumb">
+                    <li class="breadcrumb-item"><a href="/admin/events">Veranstaltungen</a></li>
+                    <li class="breadcrumb-item"><a href="/admin/events/@EventId">@currentEvent?.Title</a></li>
+                    <li class="breadcrumb-item"><a href="/admin/events/@EventId/companies">Firmeneinladungen</a></li>
+                    <li class="breadcrumb-item active">@pageTitle</li>
+                </ol>
+            </nav>
+            <h2>@pageTitle</h2>
+            @if (currentEvent != null)
+            {
+                <p class="text-muted">@currentEvent.Title</p>
+            }
+        </div>
+
+        <!-- Alert Messages -->
+        @if (!string.IsNullOrEmpty(errorMessage))
+        {
+            <div class="alert alert-danger alert-dismissible fade show" role="alert">
+                @errorMessage
+                <button type="button" class="btn-close" @onclick="() => errorMessage = null"></button>
+            </div>
+        }
+
+        @if (mode == FormMode.Batch)
+        {
+            <!-- BATCH MODE FORM -->
+            <EditForm Model="@batchModels" OnValidSubmit="@HandleBatchSubmit">
+                <div class="card mb-3">
+                    <div class="card-header">
+                        <h5 class="mb-0">Sammeleinladung — Standardpreise</h5>
+                    </div>
+                    <div class="card-body">
+                        <p class="text-muted">Alle eingeladenen Firmen erhalten die Standard-Veranstaltungspreise.</p>
+
+                        <!-- Company Rows -->
+                        @for (int i = 0; i < batchModels.Count; i++)
+                        {
+                            var index = i; // Capture for lambda
+                            var company = batchModels[index];
+
+                            <div class="row mb-3">
+                                <div class="col-md-5">
+                                    <label class="form-label">Firmenname *</label>
+                                    <InputText @bind-Value="company.CompanyName" class="form-control" placeholder="Firmenname" />
+                                </div>
+                                <div class="col-md-5">
+                                    <label class="form-label">Kontakt-E-Mail *</label>
+                                    <InputText @bind-Value="company.ContactEmail" class="form-control" placeholder="email@firma.de" type="email" />
+                                </div>
+                                <div class="col-md-2 d-flex align-items-end">
+                                    @if (batchModels.Count > 1)
+                                    {
+                                        <button type="button" class="btn btn-outline-danger" @onclick="() => RemoveCompany(index)">
+                                            <i class="bi bi-x-circle"></i>
+                                        </button>
+                                    }
+                                </div>
+                            </div>
+                        }
+
+                        <button type="button" class="btn btn-outline-primary" @onclick="AddCompany">
+                            <i class="bi bi-plus"></i> Weitere Firma hinzufügen
+                        </button>
+
+                        <!-- Shared Percentage Discount -->
+                        <div class="mt-4">
+                            <label class="form-label">Prozentrabatt (optional)</label>
+                            <div class="input-group" style="max-width: 200px;">
+                                <InputNumber @bind-Value="sharedPercentageDiscount" class="form-control" placeholder="0" />
+                                <span class="input-group-text">%</span>
+                            </div>
+                            <small class="text-muted">Wird auf alle Firmen angewendet</small>
+                        </div>
+
+                        <!-- Shared Personal Message -->
+                        <div class="mt-3">
+                            <label class="form-label">Persönliche Nachricht (optional)</label>
+                            <InputTextArea @bind-Value="sharedPersonalMessage" class="form-control" rows="3" placeholder="Diese Nachricht wird in allen Einladungs-E-Mails angezeigt..." />
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Batch Action Buttons -->
+                <div class="d-flex gap-2">
+                    <button type="submit" class="btn btn-primary" disabled="@submitting">
+                        @if (submitting)
+                        {
+                            <span class="spinner-border spinner-border-sm me-2"></span>
+                        }
+                        <i class="bi bi-envelope"></i> Einladungen erstellen & versenden
+                    </button>
+                    <button type="button" class="btn btn-outline-secondary" @onclick="NavigateBack">Abbrechen</button>
+                </div>
+            </EditForm>
+        }
+        else
+        {
+            <!-- SINGLE MODE FORM -->
+            @if (model != null)
+            {
+                <EditForm Model="@model" OnValidSubmit="@HandleValidSubmit">
+                    <FluentValidationValidator />
+
+                    <!-- Warning for Booked status -->
+                    @if (mode == FormMode.Edit && existingInvitation?.Status == InvitationStatus.Booked)
+                    {
+                        <div class="alert alert-warning" role="alert">
+                            <i class="bi bi-exclamation-triangle"></i>
+                            <strong>Achtung:</strong> Diese Firma hat bereits gebucht. Preisänderungen betreffen die zukünftige Abrechnung.
+                        </div>
+                    }
+
+                    <!-- Section 1: Firmendaten -->
+                    <div class="card mb-3">
+                        <div class="card-header">
+                            <h5 class="mb-0">Firmendaten</h5>
+                        </div>
+                        <div class="card-body">
+                            <div class="row">
+                                <div class="col-md-6 mb-3">
+                                    <label class="form-label">Firmenname *</label>
+                                    <InputText @bind-Value="model.CompanyName" class="form-control" />
+                                    <ValidationMessage For="@(() => model.CompanyName)" />
+                                </div>
+                                <div class="col-md-6 mb-3">
+                                    <label class="form-label">Kontakt-E-Mail *</label>
+                                    <InputText @bind-Value="model.ContactEmail" class="form-control" type="email" />
+                                    <ValidationMessage For="@(() => model.ContactEmail)" />
+                                </div>
+                            </div>
+                            <div class="row">
+                                <div class="col-md-6 mb-3">
+                                    <label class="form-label">Telefon (optional)</label>
+                                    <InputText @bind-Value="model.ContactPhone" class="form-control" />
+                                    <ValidationMessage For="@(() => model.ContactPhone)" />
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Section 2: Preisgestaltung -->
+                    <div class="card mb-3">
+                        <div class="card-header">
+                            <h5 class="mb-0">Preisgestaltung</h5>
+                        </div>
+                        <div class="card-body">
+                            <!-- Percentage Discount -->
+                            <div class="mb-4">
+                                <label class="form-label">Prozentrabatt (optional)</label>
+                                <div class="input-group" style="max-width: 200px;">
+                                    <InputNumber @bind-Value="model.PercentageDiscount" @bind-Value:after="ApplyPercentageDiscount" class="form-control" />
+                                    <span class="input-group-text">%</span>
+                                </div>
+                                <small class="text-muted">Wird auf alle Agendapunkte angewendet</small>
+                                <ValidationMessage For="@(() => model.PercentageDiscount)" />
+                            </div>
+
+                            <!-- Per-Item Pricing Table -->
+                            @if (model.AgendaItemPrices.Any())
+                            {
+                                <table class="table table-sm">
+                                    <thead>
+                                        <tr>
+                                            <th>Agendapunkt</th>
+                                            <th>Basispreis</th>
+                                            <th>Rabattpreis</th>
+                                            <th>Individueller Preis</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        @foreach (var item in model.AgendaItemPrices)
+                                        {
+                                            <tr>
+                                                <td>@item.AgendaItemTitle</td>
+                                                <td class="text-muted">@item.BasePrice.ToString("C2", new System.Globalization.CultureInfo("de-DE"))</td>
+                                                <td>
+                                                    @if (model.PercentageDiscount.HasValue && model.PercentageDiscount.Value > 0)
+                                                    {
+                                                        var discounted = item.BasePrice * (1 - model.PercentageDiscount.Value / 100);
+                                                        <span class="text-success">@discounted.ToString("C2", new System.Globalization.CultureInfo("de-DE"))</span>
+                                                    }
+                                                    else
+                                                    {
+                                                        <span class="text-muted">-</span>
+                                                    }
+                                                </td>
+                                                <td>
+                                                    <div class="input-group" style="max-width: 200px;">
+                                                        <span class="input-group-text">€</span>
+                                                        <InputNumber @bind-Value="item.ManualOverride" class="form-control" placeholder="Optional" />
+                                                    </div>
+                                                </td>
+                                            </tr>
+                                        }
+                                    </tbody>
+                                </table>
+                            }
+                        </div>
+                    </div>
+
+                    <!-- Section 3: Persönliche Nachricht -->
+                    <div class="card mb-3">
+                        <div class="card-header">
+                            <h5 class="mb-0">Persönliche Nachricht</h5>
+                        </div>
+                        <div class="card-body">
+                            <label class="form-label">Persönliche Nachricht (optional)</label>
+                            <InputTextArea @bind-Value="model.PersonalMessage" class="form-control" rows="4" placeholder="Diese Nachricht wird in der Einladungs-E-Mail angezeigt..." />
+                            <ValidationMessage For="@(() => model.PersonalMessage)" />
+                        </div>
+                    </div>
+
+                    <!-- Section 4: E-Mail-Vorschau -->
+                    <div class="card mb-3">
+                        <div class="card-header d-flex justify-content-between align-items-center">
+                            <h5 class="mb-0">E-Mail-Vorschau</h5>
+                            <button type="button" class="btn btn-outline-info btn-sm" @onclick="TogglePreview">
+                                <i class="bi bi-eye"></i> @(showPreview ? "Vorschau ausblenden" : "Vorschau anzeigen")
+                            </button>
+                        </div>
+                        @if (showPreview)
+                        {
+                            <div class="card-body">
+                                @if (mode == FormMode.Create)
+                                {
+                                    <div class="alert alert-info">
+                                        <i class="bi bi-info-circle"></i>
+                                        Speichern Sie zunächst die Einladung, um eine Vorschau zu sehen.
+                                    </div>
+                                }
+                                else if (existingInvitation != null && currentEvent != null)
+                                {
+                                    <div style="border: 1px solid #dee2e6; padding: 1rem; background: #f8f9fa;">
+                                        @((MarkupString)BuildPreviewHtml())
+                                    </div>
+                                }
+                            </div>
+                        }
+                    </div>
+
+                    <!-- Action Buttons -->
+                    <div class="d-flex gap-2">
+                        <button type="submit" class="btn btn-secondary" @onclick="() => model.SendImmediately = false" disabled="@submitting">
+                            @if (submitting)
+                            {
+                                <span class="spinner-border spinner-border-sm me-2"></span>
+                            }
+                            Als Entwurf speichern
+                        </button>
+                        <button type="submit" class="btn btn-primary" @onclick="() => model.SendImmediately = true" disabled="@submitting">
+                            @if (submitting)
+                            {
+                                <span class="spinner-border spinner-border-sm me-2"></span>
+                            }
+                            @(mode == FormMode.Edit ? "Speichern & Senden" : "Erstellen & Senden")
+                        </button>
+                        <button type="button" class="btn btn-outline-secondary" @onclick="NavigateBack">Abbrechen</button>
+                    </div>
+                </EditForm>
+            }
+        }
+    }
+</div>
+
+@code {
+    [Parameter]
+    public int EventId { get; set; }
+
+    [Parameter]
+    public int? InvitationId { get; set; }
+
+    private enum FormMode
+    {
+        Create,
+        Edit,
+        Batch
+    }
+
+    private FormMode mode;
+    private string pageTitle = "";
+    private Event? currentEvent;
+    private EventCompany? existingInvitation;
+    private CompanyInvitationFormModel? model;
+    private List<CompanyInvitationFormModel> batchModels = new();
+    private decimal? sharedPercentageDiscount;
+    private string? sharedPersonalMessage;
+    private bool loading = true;
+    private bool submitting = false;
+    private bool showPreview = false;
+    private string? errorMessage;
+
+    protected override async Task OnInitializedAsync()
+    {
+        try
+        {
+            // Determine mode from route
+            var uri = Navigation.Uri;
+            if (uri.Contains("/create-batch"))
+            {
+                mode = FormMode.Batch;
+                pageTitle = "Sammeleinladung";
+                await InitializeBatchMode();
+            }
+            else if (InvitationId.HasValue)
+            {
+                mode = FormMode.Edit;
+                pageTitle = "Einladung bearbeiten";
+                await InitializeEditMode();
+            }
+            else
+            {
+                mode = FormMode.Create;
+                pageTitle = "Firma einladen";
+                await InitializeCreateMode();
+            }
+        }
+        catch (Exception ex)
+        {
+            errorMessage = $"Fehler beim Laden: {ex.Message}";
+        }
+        finally
+        {
+            loading = false;
+        }
+    }
+
+    private async Task InitializeCreateMode()
+    {
+        currentEvent = await EventService.GetEventByIdAsync(EventId);
+        if (currentEvent == null)
+        {
+            errorMessage = "Veranstaltung nicht gefunden.";
+            return;
+        }
+
+        model = new CompanyInvitationFormModel
+        {
+            EventId = EventId,
+            AgendaItemPrices = currentEvent.AgendaItems
+                .Select(ai => new CompanyAgendaItemPriceModel
+                {
+                    AgendaItemId = ai.Id,
+                    AgendaItemTitle = ai.Title,
+                    BasePrice = ai.CostForMakler,
+                    ManualOverride = null
+                })
+                .ToList()
+        };
+    }
+
+    private async Task InitializeEditMode()
+    {
+        currentEvent = await EventService.GetEventByIdAsync(EventId);
+        existingInvitation = await CompanyInvitationService.GetInvitationByIdAsync(InvitationId!.Value);
+
+        if (existingInvitation == null)
+        {
+            errorMessage = "Einladung nicht gefunden.";
+            return;
+        }
+
+        // Map existing invitation to form model
+        model = new CompanyInvitationFormModel
+        {
+            EventId = EventId,
+            CompanyName = existingInvitation.CompanyName,
+            ContactEmail = existingInvitation.ContactEmail,
+            ContactPhone = existingInvitation.ContactPhone,
+            PercentageDiscount = existingInvitation.PercentageDiscount,
+            PersonalMessage = existingInvitation.PersonalMessage,
+            SendImmediately = false,
+            AgendaItemPrices = currentEvent!.AgendaItems
+                .Select(ai =>
+                {
+                    var customPrice = existingInvitation.AgendaItemPrices
+                        .FirstOrDefault(p => p.AgendaItemId == ai.Id);
+
+                    return new CompanyAgendaItemPriceModel
+                    {
+                        AgendaItemId = ai.Id,
+                        AgendaItemTitle = ai.Title,
+                        BasePrice = ai.CostForMakler,
+                        ManualOverride = customPrice?.CustomPrice
+                    };
+                })
+                .ToList()
+        };
+    }
+
+    private async Task InitializeBatchMode()
+    {
+        currentEvent = await EventService.GetEventByIdAsync(EventId);
+        if (currentEvent == null)
+        {
+            errorMessage = "Veranstaltung nicht gefunden.";
+            return;
+        }
+
+        // Start with one empty company
+        batchModels = new List<CompanyInvitationFormModel>
+        {
+            new CompanyInvitationFormModel { EventId = EventId }
+        };
+    }
+
+    private void ApplyPercentageDiscount()
+    {
+        // Don't auto-populate ManualOverride fields
+        // The percentage is shown in the "Rabattpreis" column as visual reference only
+        StateHasChanged();
+    }
+
+    private void AddCompany()
+    {
+        batchModels.Add(new CompanyInvitationFormModel { EventId = EventId });
+    }
+
+    private void RemoveCompany(int index)
+    {
+        if (batchModels.Count > 1)
+        {
+            batchModels.RemoveAt(index);
+        }
+    }
+
+    private void TogglePreview()
+    {
+        showPreview = !showPreview;
+    }
+
+    private string BuildPreviewHtml()
+    {
+        if (existingInvitation == null || currentEvent == null)
+            return "<p>Keine Vorschau verfügbar.</p>";
+
+        // Build simplified preview
+        var message = model?.PersonalMessage ?? existingInvitation.PersonalMessage ?? "";
+        var companyName = model?.CompanyName ?? existingInvitation.CompanyName;
+        var eventDate = TimeZoneHelper.FormatDateTimeCet(currentEvent.StartDateUtc, "dd.MM.yyyy");
+        var deadline = TimeZoneHelper.FormatDateTimeCet(currentEvent.RegistrationDeadlineUtc, "dd.MM.yyyy");
+
+        var messageHtml = string.IsNullOrEmpty(message)
+            ? ""
+            : $"<div style='background: #f8f9fa; border-left: 4px solid #007bff; padding: 1rem; margin: 1rem 0;'><em>{message}</em></div>";
+
+        return $@"
+            <div style='font-family: Arial, sans-serif;'>
+                <h3>Einladung zur Veranstaltung: {currentEvent.Title}</h3>
+                <p>Sehr geehrte Damen und Herren von <strong>{companyName}</strong>,</p>
+                {messageHtml}
+                <p>Wir laden Sie herzlich ein, an unserer Veranstaltung teilzunehmen.</p>
+                <p><strong>Veranstaltungsdaten:</strong></p>
+                <ul>
+                    <li>Datum: {eventDate}</li>
+                    <li>Anmeldeschluss: {deadline}</li>
+                </ul>
+                <p style='margin-top: 2rem;'>
+                    <a href='#' style='background: #007bff; color: white; padding: 10px 20px; text-decoration: none; border-radius: 4px;'>
+                        Jetzt anmelden
+                    </a>
+                </p>
+            </div>
+        ";
+    }
+
+    private async Task HandleValidSubmit()
+    {
+        if (model == null) return;
+
+        submitting = true;
+        errorMessage = null;
+
+        try
+        {
+            if (mode == FormMode.Create)
+            {
+                (bool success, int? invitationId, string? error) = await CompanyInvitationService.CreateInvitationAsync(model);
+                if (success)
+                {
+                    Navigation.NavigateTo($"/admin/events/{EventId}/companies");
+                }
+                else
+                {
+                    errorMessage = error ?? "Fehler beim Erstellen der Einladung.";
+                }
+            }
+            else if (mode == FormMode.Edit)
+            {
+                (bool success, string? error) = await CompanyInvitationService.UpdateInvitationAsync(InvitationId!.Value, model);
+                if (success)
+                {
+                    if (model.SendImmediately)
+                    {
+                        // Also send the invitation if requested
+                        if (existingInvitation?.Status == InvitationStatus.Draft)
+                        {
+                            await CompanyInvitationService.SendInvitationAsync(InvitationId.Value);
+                        }
+                        else
+                        {
+                            await CompanyInvitationService.ResendInvitationAsync(InvitationId.Value);
+                        }
+                    }
+                    Navigation.NavigateTo($"/admin/events/{EventId}/companies");
+                }
+                else
+                {
+                    errorMessage = error ?? "Fehler beim Aktualisieren der Einladung.";
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            errorMessage = $"Fehler: {ex.Message}";
+        }
+        finally
+        {
+            submitting = false;
+        }
+    }
+
+    private async Task HandleBatchSubmit()
+    {
+        submitting = true;
+        errorMessage = null;
+
+        try
+        {
+            // Apply shared discount and message to all models
+            var modelsToCreate = batchModels
+                .Where(m => !string.IsNullOrWhiteSpace(m.CompanyName) && !string.IsNullOrWhiteSpace(m.ContactEmail))
+                .Select(m =>
+                {
+                    m.PercentageDiscount = sharedPercentageDiscount;
+                    m.PersonalMessage = sharedPersonalMessage;
+                    m.SendImmediately = true; // Batch always sends immediately
+                    m.EventId = EventId;
+                    // Populate standard pricing
+                    m.AgendaItemPrices = currentEvent!.AgendaItems
+                        .Select(ai => new CompanyAgendaItemPriceModel
+                        {
+                            AgendaItemId = ai.Id,
+                            AgendaItemTitle = ai.Title,
+                            BasePrice = ai.CostForMakler,
+                            ManualOverride = null
+                        })
+                        .ToList();
+                    return m;
+                })
+                .ToList();
+
+            if (!modelsToCreate.Any())
+            {
+                errorMessage = "Bitte geben Sie mindestens eine Firma mit Name und E-Mail ein.";
+                submitting = false;
+                return;
+            }
+
+            (int succeeded, int failed, List<string> errors) = await CompanyInvitationService.CreateBatchInvitationsAsync(EventId, modelsToCreate);
+
+            if (failed > 0)
+            {
+                errorMessage = $"{succeeded} Einladungen erstellt, {failed} fehlgeschlagen: {string.Join(", ", errors)}";
+            }
+            else
+            {
+                Navigation.NavigateTo($"/admin/events/{EventId}/companies");
+            }
+        }
+        catch (Exception ex)
+        {
+            errorMessage = $"Fehler: {ex.Message}";
+        }
+        finally
+        {
+            submitting = false;
+        }
+    }
+
+    private void NavigateBack()
+    {
+        Navigation.NavigateTo($"/admin/events/{EventId}/companies");
+    }
+}

@@ -438,6 +438,34 @@ public class CompanyInvitationService
         return summary;
     }
 
+    /// <summary>
+    /// Creates multiple invitations in batch with standard pricing. Returns counts and errors.
+    /// </summary>
+    public async Task<(int Succeeded, int Failed, List<string> Errors)> CreateBatchInvitationsAsync(
+        int eventId,
+        List<CompanyInvitationFormModel> models)
+    {
+        var succeeded = 0;
+        var failed = 0;
+        var errors = new List<string>();
+
+        foreach (var model in models)
+        {
+            var (success, _, error) = await CreateInvitationAsync(model);
+            if (success)
+            {
+                succeeded++;
+            }
+            else
+            {
+                failed++;
+                errors.Add($"{model.CompanyName}: {error}");
+            }
+        }
+
+        return (succeeded, failed, errors);
+    }
+
     private string BuildInvitationLink(string invitationCode)
     {
         var baseUrl = _configuration["BaseUrl"] ?? "https://localhost";
