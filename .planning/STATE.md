@@ -3,12 +3,12 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: unknown
-last_updated: "2026-02-27T11:06:18.020Z"
+last_updated: "2026-02-27T11:16:04.205Z"
 progress:
   total_phases: 5
   completed_phases: 4
   total_plans: 19
-  completed_plans: 17
+  completed_plans: 18
 ---
 
 # Project State
@@ -23,18 +23,18 @@ See: .planning/PROJECT.md (updated 2026-02-26)
 ## Current Position
 
 Phase: 5 of 8 (Company Booking Portal)
-Plan: 1 of 3
+Plan: 2 of 3
 Status: In Progress
-Last activity: 2026-02-27 - Completed plan 05-01 (Foundation Layer)
+Last activity: 2026-02-27 - Completed plan 05-02 (Company Booking Service)
 
-Progress: [█████░░░░░] 52.6% (4/8 phases, 17/19 plans completed)
+Progress: [█████░░░░░] 57.9% (4/8 phases, 18/19 plans completed)
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 17
-- Average duration: 5.3 minutes
-- Total execution time: 1.52 hours
+- Total plans completed: 18
+- Average duration: 5.5 minutes
+- Total execution time: 1.69 hours
 
 **By Phase:**
 
@@ -44,17 +44,17 @@ Progress: [█████░░░░░] 52.6% (4/8 phases, 17/19 plans comple
 | 02 | 4 | 2011s | 502.8s |
 | 03 | 5 | 1402s | 280.4s |
 | 04 | 3 | 1094s | 364.7s |
-| 05 | 1 | 179s | 179.0s |
+| 05 | 2 | 609s | 304.5s |
 
 **Recent Plans:**
 
 | Phase-Plan | Duration | Tasks | Files | Date |
 |------------|----------|-------|-------|------|
+| 05-02 | 430s (7.2m) | 3 | 4 | 2026-02-27 |
 | 05-01 | 179s (3.0m) | 3 | 7 | 2026-02-27 |
 | 04-03 | 318s (5.3m) | 3 | 2 | 2026-02-27 |
 | 04-02 | 518s (8.6m) | 1 | 6 | 2026-02-27 |
 | 04-01 | 258s (4.3m) | 2 | 11 | 2026-02-27 |
-| 03-05 | 269s (4.5m) | 3 | 3 | 2026-02-26 |
 
 ## Accumulated Context
 
@@ -122,6 +122,9 @@ Recent decisions affecting current work:
 - [Phase 04-03]: Batch mode uses standard pricing with optional shared percentage discount
 - [Phase 05]: Added CancellationComment, BookingDateUtc, and IsNonParticipation fields to EventCompany for booking management
 - [Phase 05]: Rate limit of 10 requests per minute with zero queue for company booking endpoint
+- [Phase 05]: Use constant-time comparison for GUID validation to prevent timing attacks
+- [Phase 05]: Fire-and-forget email with Task.Run for non-blocking booking submission
+- [Phase 05]: Allow Booked/Cancelled invitations in ValidateInvitationCodeAsync for status viewing
 
 ### Pending Todos
 
@@ -140,5 +143,5 @@ None yet.
 ## Session Continuity
 
 Last session: 2026-02-27
-Stopped at: Completed 05-01-PLAN.md execution
-Resume file: .planning/phases/05-company-booking-portal/05-01-SUMMARY.md
+Stopped at: Completed 05-02-PLAN.md execution
+Resume file: .planning/phases/05-company-booking-portal/05-02-SUMMARY.md

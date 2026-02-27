@@ -84,14 +84,14 @@
 
 ### Firmenbuchung (Unternehmensvertreter)
 
-- [ ] **CBOK-01**: Unternehmensvertreter sieht Buchungsseite per GUID-Link (US-20)
-- [ ] **CBOK-02**: Unternehmensvertreter sieht firmenspezifische Preise und Agendapunkte
+- [x] **CBOK-01**: Unternehmensvertreter sieht Buchungsseite per GUID-Link (US-20)
+- [x] **CBOK-02**: Unternehmensvertreter sieht firmenspezifische Preise und Agendapunkte
 - [x] **CBOK-03**: Unternehmensvertreter kann beliebig viele Teilnehmer eintragen (US-21)
-- [ ] **CBOK-04**: Unternehmensvertreter kann Zusatzoptionen auswählen (US-21)
+- [x] **CBOK-04**: Unternehmensvertreter kann Zusatzoptionen auswählen (US-21)
 - [x] **CBOK-05**: System berechnet Kosten automatisch (Fixpreis + Zusatzteilnehmer)
-- [ ] **CBOK-06**: Unternehmensvertreter kann Buchung absenden und erhält Bestätigung
-- [ ] **CBOK-07**: Unternehmensvertreter kann Buchung stornieren (US-22)
-- [ ] **CBOK-08**: Unternehmensvertreter kann Nicht-Teilnahme melden (US-23)
+- [x] **CBOK-06**: Unternehmensvertreter kann Buchung absenden und erhält Bestätigung
+- [x] **CBOK-07**: Unternehmensvertreter kann Buchung stornieren (US-22)
+- [x] **CBOK-08**: Unternehmensvertreter kann Nicht-Teilnahme melden (US-23)
 
 ### E-Mail-Benachrichtigungen
 
@@ -167,14 +167,14 @@
 | MCAN-02 | Phase 7 | Pending |
 | MCAN-03 | Phase 7 | Pending |
 | MCAN-04 | Phase 7 | Pending |
-| CBOK-01 | Phase 5 | Pending |
-| CBOK-02 | Phase 5 | Pending |
+| CBOK-01 | Phase 5 | Complete |
+| CBOK-02 | Phase 5 | Complete |
 | CBOK-03 | Phase 5 | Complete |
-| CBOK-04 | Phase 5 | Pending |
+| CBOK-04 | Phase 5 | Complete |
 | CBOK-05 | Phase 5 | Complete |
-| CBOK-06 | Phase 5 | Pending |
-| CBOK-07 | Phase 5 | Pending |
-| CBOK-08 | Phase 5 | Pending |
+| CBOK-06 | Phase 5 | Complete |
+| CBOK-07 | Phase 5 | Complete |
+| CBOK-08 | Phase 5 | Complete |
 | MAIL-01 | Phase 3 | Complete (03-01) |
 | MAIL-02 | Phase 6 | Pending |
 | MAIL-03 | Phase 4 | Complete |
