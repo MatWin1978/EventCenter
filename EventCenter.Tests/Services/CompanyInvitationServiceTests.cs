@@ -46,7 +46,8 @@ public class CompanyInvitationServiceTests : IDisposable
             StartDateUtc = DateTime.UtcNow.AddDays(30),
             EndDateUtc = DateTime.UtcNow.AddDays(30).AddHours(4),
             RegistrationDeadlineUtc = DateTime.UtcNow.AddDays(15),
-            MaxParticipants = 100,
+            MaxCapacity = 100,
+            MaxCompanions = 2,
             IsPublished = true
         };
 
@@ -107,20 +108,25 @@ public class CompanyInvitationServiceTests : IDisposable
         Assert.True(Guid.TryParse(guidString, out _));
     }
 
-    [Theory]
-    [InlineData(100, null, null, 100.00)]
-    [InlineData(100, 10, null, 90.00)]
-    [InlineData(100, 10, 85, 85.00)]
-    [InlineData(99.99, 33.33, null, 66.66)]
-    [InlineData(100, 50, 45, 45.00)]
-    [InlineData(200, 25, null, 150.00)]
-    public void CalculateCustomPrice_AppliesCorrectLogic(decimal basePrice, decimal? percentageDiscount, decimal? manualOverride, decimal expected)
+    [Fact]
+    public void CalculateCustomPrice_NoDiscount_ReturnsBasePrice()
     {
-        // Act
-        var result = CompanyInvitationService.CalculateCustomPrice(basePrice, percentageDiscount, manualOverride);
+        Assert.Equal(100.00m, CompanyInvitationService.CalculateCustomPrice(100m, null, null));
+    }
 
-        // Assert
-        Assert.Equal(expected, result);
+    [Fact]
+    public void CalculateCustomPrice_PercentageDiscount_AppliesDiscount()
+    {
+        Assert.Equal(90.00m, CompanyInvitationService.CalculateCustomPrice(100m, 10m, null));
+        Assert.Equal(150.00m, CompanyInvitationService.CalculateCustomPrice(200m, 25m, null));
+        Assert.Equal(66.66m, CompanyInvitationService.CalculateCustomPrice(99.99m, 33.33m, null));
+    }
+
+    [Fact]
+    public void CalculateCustomPrice_ManualOverride_TakesPrecedence()
+    {
+        Assert.Equal(85.00m, CompanyInvitationService.CalculateCustomPrice(100m, 10m, 85m));
+        Assert.Equal(45.00m, CompanyInvitationService.CalculateCustomPrice(100m, 50m, 45m));
     }
 
     [Fact]
@@ -345,6 +351,7 @@ public class CompanyInvitationServiceTests : IDisposable
             PercentageDiscount = 10
         };
         _context.EventCompanies.Add(invitation);
+        await _context.SaveChangesAsync();
 
         var oldPrice = new EventCompanyAgendaItemPrice
         {
@@ -488,6 +495,7 @@ public class CompanyInvitationServiceTests : IDisposable
             Status = InvitationStatus.Draft
         };
         _context.EventCompanies.Add(invitation);
+        await _context.SaveChangesAsync();
 
         var agendaPrice = new EventCompanyAgendaItemPrice
         {

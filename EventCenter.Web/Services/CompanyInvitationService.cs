@@ -1,0 +1,446 @@
+using System.Security.Cryptography;
+using EventCenter.Web.Domain;
+using EventCenter.Web.Domain.Entities;
+using EventCenter.Web.Domain.Enums;
+using EventCenter.Web.Infrastructure.Email;
+using EventCenter.Web.Models;
+using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.Logging;
+
+namespace EventCenter.Web.Services;
+
+public class CompanyInvitationService
+{
+    private readonly EventCenterDbContext _context;
+    private readonly IEmailSender _emailSender;
+    private readonly ILogger<CompanyInvitationService> _logger;
+    private readonly IConfiguration _configuration;
+
+    public CompanyInvitationService(
+        EventCenterDbContext context,
+        IEmailSender emailSender,
+        ILogger<CompanyInvitationService> logger,
+        IConfiguration configuration)
+    {
+        _context = context;
+        _emailSender = emailSender;
+        _logger = logger;
+        _configuration = configuration;
+    }
+
+    /// <summary>
+    /// Generates a cryptographically secure GUID-based invitation code (32 hex characters without dashes).
+    /// </summary>
+    public static string GenerateSecureInvitationCode()
+    {
+        var bytes = new byte[16];
+        RandomNumberGenerator.Fill(bytes);
+
+        // Set version 4 bits (RFC 4122)
+        bytes[7] = (byte)((bytes[7] & 0x0F) | 0x40);
+        bytes[8] = (byte)((bytes[8] & 0x3F) | 0x80);
+
+        var guid = new Guid(bytes);
+        return guid.ToString("N"); // N format = 32 hex chars without dashes
+    }
+
+    /// <summary>
+    /// Calculates custom price with percentage discount applied first, then manual override takes precedence.
+    /// </summary>
+    public static decimal CalculateCustomPrice(decimal basePrice, decimal? percentageDiscount, decimal? manualOverride)
+    {
+        if (manualOverride.HasValue)
+        {
+            return manualOverride.Value;
+        }
+
+        if (percentageDiscount.HasValue)
+        {
+            var discount = basePrice * (percentageDiscount.Value / 100m);
+            var discountedPrice = basePrice - discount;
+            return Math.Round(discountedPrice, 2, MidpointRounding.AwayFromZero);
+        }
+
+        return basePrice;
+    }
+
+    /// <summary>
+    /// Creates a new company invitation with optional immediate sending.
+    /// </summary>
+    public async Task<(bool Success, int? InvitationId, string? ErrorMessage)> CreateInvitationAsync(
+        CompanyInvitationFormModel formModel)
+    {
+        // Verify event exists
+        var evt = await _context.Events
+            .Include(e => e.AgendaItems)
+            .FirstOrDefaultAsync(e => e.Id == formModel.EventId);
+
+        if (evt == null)
+        {
+            return (false, null, "Veranstaltung nicht gefunden.");
+        }
+
+        // Check for duplicate email
+        var existingInvitation = await _context.EventCompanies
+            .AnyAsync(ec => ec.EventId == formModel.EventId &&
+                           ec.ContactEmail == formModel.ContactEmail);
+
+        if (existingInvitation)
+        {
+            return (false, null, "Diese Firma wurde bereits eingeladen.");
+        }
+
+        using var transaction = await _context.Database.BeginTransactionAsync();
+
+        try
+        {
+            // Create invitation
+            var invitation = new EventCompany
+            {
+                EventId = formModel.EventId,
+                CompanyName = formModel.CompanyName,
+                ContactEmail = formModel.ContactEmail,
+                ContactPhone = formModel.ContactPhone,
+                InvitationCode = GenerateSecureInvitationCode(),
+                PercentageDiscount = formModel.PercentageDiscount,
+                PersonalMessage = formModel.PersonalMessage,
+                Status = formModel.SendImmediately ? InvitationStatus.Sent : InvitationStatus.Draft,
+                InvitationSentUtc = formModel.SendImmediately ? DateTime.UtcNow : null
+            };
+
+            _context.EventCompanies.Add(invitation);
+            await _context.SaveChangesAsync();
+
+            // Create agenda item prices
+            foreach (var priceModel in formModel.AgendaItemPrices)
+            {
+                var agendaItem = evt.AgendaItems.FirstOrDefault(a => a.Id == priceModel.AgendaItemId);
+                if (agendaItem == null) continue;
+
+                var customPrice = CalculateCustomPrice(
+                    priceModel.BasePrice,
+                    formModel.PercentageDiscount,
+                    priceModel.ManualOverride);
+
+                // Only store if different from base price
+                if (customPrice != priceModel.BasePrice)
+                {
+                    var agendaPrice = new EventCompanyAgendaItemPrice
+                    {
+                        EventCompanyId = invitation.Id,
+                        AgendaItemId = priceModel.AgendaItemId,
+                        CustomPrice = customPrice
+                    };
+
+                    _context.EventCompanyAgendaItemPrices.Add(agendaPrice);
+                }
+                else
+                {
+                    // Always store pricing entries for tracking
+                    var agendaPrice = new EventCompanyAgendaItemPrice
+                    {
+                        EventCompanyId = invitation.Id,
+                        AgendaItemId = priceModel.AgendaItemId,
+                        CustomPrice = customPrice
+                    };
+
+                    _context.EventCompanyAgendaItemPrices.Add(agendaPrice);
+                }
+            }
+
+            await _context.SaveChangesAsync();
+            await transaction.CommitAsync();
+
+            // Fire-and-forget email sending if SendImmediately
+            if (formModel.SendImmediately)
+            {
+                _ = Task.Run(async () =>
+                {
+                    try
+                    {
+                        var invitationLink = BuildInvitationLink(invitation.InvitationCode!);
+                        var personalMessage = formModel.PersonalMessage ?? string.Empty;
+
+                        // Reload invitation with agenda item prices for email
+                        var invitationForEmail = await _context.EventCompanies
+                            .Include(ec => ec.AgendaItemPrices)
+                                .ThenInclude(aip => aip.AgendaItem)
+                            .FirstAsync(ec => ec.Id == invitation.Id);
+
+                        await _emailSender.SendCompanyInvitationAsync(
+                            invitationForEmail,
+                            evt,
+                            personalMessage,
+                            invitationLink);
+                    }
+                    catch (Exception ex)
+                    {
+                        _logger.LogError(ex,
+                            "Failed to send company invitation email to {Email} for event {EventId}",
+                            invitation.ContactEmail,
+                            formModel.EventId);
+                    }
+                });
+            }
+
+            return (true, invitation.Id, null);
+        }
+        catch (Exception ex)
+        {
+            await transaction.RollbackAsync();
+            _logger.LogError(ex, "Failed to create company invitation for event {EventId}", formModel.EventId);
+            throw;
+        }
+    }
+
+    /// <summary>
+    /// Sends a draft invitation (transitions to Sent status).
+    /// </summary>
+    public async Task<(bool Success, string? ErrorMessage)> SendInvitationAsync(int invitationId)
+    {
+        var invitation = await _context.EventCompanies
+            .Include(ec => ec.Event)
+            .Include(ec => ec.AgendaItemPrices)
+                .ThenInclude(aip => aip.AgendaItem)
+            .FirstOrDefaultAsync(ec => ec.Id == invitationId);
+
+        if (invitation == null)
+        {
+            return (false, "Einladung nicht gefunden.");
+        }
+
+        if (invitation.Status != InvitationStatus.Draft)
+        {
+            return (false, "Nur Entwürfe können versendet werden.");
+        }
+
+        invitation.Status = InvitationStatus.Sent;
+        invitation.InvitationSentUtc = DateTime.UtcNow;
+
+        await _context.SaveChangesAsync();
+
+        // Fire-and-forget email
+        _ = Task.Run(async () =>
+        {
+            try
+            {
+                var invitationLink = BuildInvitationLink(invitation.InvitationCode!);
+                var personalMessage = invitation.PersonalMessage ?? string.Empty;
+
+                await _emailSender.SendCompanyInvitationAsync(
+                    invitation,
+                    invitation.Event,
+                    personalMessage,
+                    invitationLink);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex,
+                    "Failed to send company invitation email to {Email} for invitation {InvitationId}",
+                    invitation.ContactEmail,
+                    invitationId);
+            }
+        });
+
+        return (true, null);
+    }
+
+    /// <summary>
+    /// Resends an existing invitation (updates timestamp and sends email again).
+    /// </summary>
+    public async Task<(bool Success, string? ErrorMessage)> ResendInvitationAsync(int invitationId)
+    {
+        var invitation = await _context.EventCompanies
+            .Include(ec => ec.Event)
+            .Include(ec => ec.AgendaItemPrices)
+                .ThenInclude(aip => aip.AgendaItem)
+            .FirstOrDefaultAsync(ec => ec.Id == invitationId);
+
+        if (invitation == null)
+        {
+            return (false, "Einladung nicht gefunden.");
+        }
+
+        if (invitation.Status != InvitationStatus.Sent)
+        {
+            return (false, "Nur versendete Einladungen können erneut versendet werden.");
+        }
+
+        invitation.InvitationSentUtc = DateTime.UtcNow;
+        await _context.SaveChangesAsync();
+
+        // Fire-and-forget email
+        _ = Task.Run(async () =>
+        {
+            try
+            {
+                var invitationLink = BuildInvitationLink(invitation.InvitationCode!);
+                var personalMessage = invitation.PersonalMessage ?? string.Empty;
+
+                await _emailSender.SendCompanyInvitationAsync(
+                    invitation,
+                    invitation.Event,
+                    personalMessage,
+                    invitationLink);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex,
+                    "Failed to resend company invitation email to {Email} for invitation {InvitationId}",
+                    invitation.ContactEmail,
+                    invitationId);
+            }
+        });
+
+        return (true, null);
+    }
+
+    /// <summary>
+    /// Updates invitation details (pricing always editable per user decision).
+    /// </summary>
+    public async Task<(bool Success, string? ErrorMessage)> UpdateInvitationAsync(
+        int invitationId,
+        CompanyInvitationFormModel formModel)
+    {
+        var invitation = await _context.EventCompanies
+            .Include(ec => ec.AgendaItemPrices)
+            .FirstOrDefaultAsync(ec => ec.Id == invitationId);
+
+        if (invitation == null)
+        {
+            return (false, "Einladung nicht gefunden.");
+        }
+
+        var evt = await _context.Events
+            .Include(e => e.AgendaItems)
+            .FirstOrDefaultAsync(e => e.Id == formModel.EventId);
+
+        if (evt == null)
+        {
+            return (false, "Veranstaltung nicht gefunden.");
+        }
+
+        using var transaction = await _context.Database.BeginTransactionAsync();
+
+        try
+        {
+            // Update basic details
+            invitation.CompanyName = formModel.CompanyName;
+            invitation.ContactEmail = formModel.ContactEmail;
+            invitation.ContactPhone = formModel.ContactPhone;
+            invitation.PercentageDiscount = formModel.PercentageDiscount;
+            invitation.PersonalMessage = formModel.PersonalMessage;
+
+            // Remove old agenda item prices
+            _context.EventCompanyAgendaItemPrices.RemoveRange(invitation.AgendaItemPrices);
+
+            // Add new agenda item prices
+            foreach (var priceModel in formModel.AgendaItemPrices)
+            {
+                var agendaItem = evt.AgendaItems.FirstOrDefault(a => a.Id == priceModel.AgendaItemId);
+                if (agendaItem == null) continue;
+
+                var customPrice = CalculateCustomPrice(
+                    priceModel.BasePrice,
+                    formModel.PercentageDiscount,
+                    priceModel.ManualOverride);
+
+                var agendaPrice = new EventCompanyAgendaItemPrice
+                {
+                    EventCompanyId = invitation.Id,
+                    AgendaItemId = priceModel.AgendaItemId,
+                    CustomPrice = customPrice
+                };
+
+                _context.EventCompanyAgendaItemPrices.Add(agendaPrice);
+            }
+
+            await _context.SaveChangesAsync();
+            await transaction.CommitAsync();
+
+            return (true, null);
+        }
+        catch (Exception ex)
+        {
+            await transaction.RollbackAsync();
+            _logger.LogError(ex, "Failed to update company invitation {InvitationId}", invitationId);
+            throw;
+        }
+    }
+
+    /// <summary>
+    /// Deletes invitation (prevented if status is Booked).
+    /// </summary>
+    public async Task<(bool Success, string? ErrorMessage)> DeleteInvitationAsync(int invitationId)
+    {
+        var invitation = await _context.EventCompanies
+            .Include(ec => ec.AgendaItemPrices)
+            .FirstOrDefaultAsync(ec => ec.Id == invitationId);
+
+        if (invitation == null)
+        {
+            return (false, "Einladung nicht gefunden.");
+        }
+
+        if (invitation.Status == InvitationStatus.Booked)
+        {
+            return (false, "Diese Einladung kann nicht gelöscht werden, da bereits eine Buchung vorliegt.");
+        }
+
+        _context.EventCompanyAgendaItemPrices.RemoveRange(invitation.AgendaItemPrices);
+        _context.EventCompanies.Remove(invitation);
+        await _context.SaveChangesAsync();
+
+        return (true, null);
+    }
+
+    /// <summary>
+    /// Gets all invitations for an event with navigation properties loaded.
+    /// </summary>
+    public async Task<List<EventCompany>> GetInvitationsForEventAsync(int eventId)
+    {
+        return await _context.EventCompanies
+            .Include(ec => ec.Event)
+            .Where(ec => ec.EventId == eventId)
+            .OrderBy(ec => ec.CompanyName)
+            .ToListAsync();
+    }
+
+    /// <summary>
+    /// Gets a single invitation by ID with agenda item prices loaded.
+    /// </summary>
+    public async Task<EventCompany?> GetInvitationByIdAsync(int invitationId)
+    {
+        return await _context.EventCompanies
+            .Include(ec => ec.Event)
+            .Include(ec => ec.AgendaItemPrices)
+                .ThenInclude(aip => aip.AgendaItem)
+            .FirstOrDefaultAsync(ec => ec.Id == invitationId);
+    }
+
+    /// <summary>
+    /// Gets invitation status summary (counts per status for overview).
+    /// </summary>
+    public async Task<Dictionary<InvitationStatus, int>> GetInvitationStatusSummaryAsync(int eventId)
+    {
+        var invitations = await _context.EventCompanies
+            .Where(ec => ec.EventId == eventId)
+            .ToListAsync();
+
+        var summary = new Dictionary<InvitationStatus, int>();
+
+        foreach (InvitationStatus status in Enum.GetValues(typeof(InvitationStatus)))
+        {
+            summary[status] = invitations.Count(i => i.Status == status);
+        }
+
+        return summary;
+    }
+
+    private string BuildInvitationLink(string invitationCode)
+    {
+        var baseUrl = _configuration["BaseUrl"] ?? "https://localhost";
+        return $"{baseUrl}/company/booking/{invitationCode}";
+    }
+}

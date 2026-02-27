@@ -43,6 +43,7 @@ builder.Services.AddValidatorsFromAssemblyContaining<EventValidator>();
 // Register application services
 builder.Services.AddScoped<EventService>();
 builder.Services.AddScoped<RegistrationService>();
+builder.Services.AddScoped<CompanyInvitationService>();
 
 // Email service
 builder.Services.Configure<SmtpSettings>(builder.Configuration.GetSection("Smtp"));
