@@ -17,7 +17,7 @@ Decimal phases appear between their surrounding integers in numeric order.
 - [ ] **Phase 3: Makler Event Discovery & Registration** - Allow brokers to browse events and self-register with agenda selection
 - [ ] **Phase 4: Company Invitations** - Enable admins to invite companies with custom pricing
 - [ ] **Phase 5: Company Booking Portal** - Anonymous company representative booking via GUID links
-- [ ] **Phase 6: Guest Management** - Brokers can register companions with limit enforcement
+- [x] **Phase 6: Guest Management** - Brokers can register companions with limit enforcement (completed 2026-02-27)
 - [ ] **Phase 7: Cancellation & Participant Management** - Registration cancellation and admin export capabilities
 - [ ] **Phase 8: Webinar Support** - Support for webinar events alongside in-person events
 
@@ -175,6 +175,6 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6 → 7 → 8
 | 3. Makler Event Discovery & Registration | 3/5 | In Progress|  |
 | 4. Company Invitations | 0/3 | Not started | - |
 | 5. Company Booking Portal | 0/TBD | Not started | - |
-| 6. Guest Management | 0/2 | Not started | - |
+| 6. Guest Management | 2/2 | Complete   | 2026-02-27 |
 | 7. Cancellation & Participant Management | 0/TBD | Not started | - |
 | 8. Webinar Support | 0/TBD | Not started | - |
