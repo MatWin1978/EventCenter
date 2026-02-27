@@ -15,6 +15,22 @@
 
 <h2>Veranstaltungen</h2>
 
+<!-- Type Filter Tabs -->
+<ul class="nav nav-tabs mb-3">
+    <li class="nav-item">
+        <button class="nav-link @(typeFilter == "All" ? "active" : "")"
+                @onclick="@(() => SetTypeFilter("All"))">Alle</button>
+    </li>
+    <li class="nav-item">
+        <button class="nav-link @(typeFilter == "InPerson" ? "active" : "")"
+                @onclick="@(() => SetTypeFilter("InPerson"))">Präsenzveranstaltung</button>
+    </li>
+    <li class="nav-item">
+        <button class="nav-link @(typeFilter == "Webinar" ? "active" : "")"
+                @onclick="@(() => SetTypeFilter("Webinar"))">Webinar</button>
+    </li>
+</ul>
+
 <!-- Filter Bar -->
 <div class="row mb-3">
     <div class="col-md-6">
@@ -112,6 +128,7 @@ else
     private List<Event> allEvents = new();
     private string searchTerm = "";
     private string dateFilter = "quarter"; // default: Nächste 3 Monate
+    private string typeFilter = "All";
     private bool isLoading = true;
     private string userEmail = "";
     private System.Threading.Timer? debounceTimer;
@@ -144,6 +161,20 @@ else
         await LoadEventsAsync();
     }
 
+    private void SetTypeFilter(string filter)
+    {
+        typeFilter = filter;
+        // No DB call needed — filter applied in GetActiveEvents/GetPastOrFullEvents
+    }
+
+    private List<Event> ApplyTypeFilter(List<Event> events)
+        => typeFilter switch
+        {
+            "InPerson" => events.Where(e => e.EventType == EventType.InPerson).ToList(),
+            "Webinar"  => events.Where(e => e.EventType == EventType.Webinar).ToList(),
+            _          => events
+        };
+
     private async Task LoadEventsAsync()
     {
         var now = DateTime.UtcNow;
@@ -167,6 +198,12 @@ else
 
     private bool IsEventActive(Event evt)
     {
+        // Webinars: always active if published (no capacity/deadline constraints)
+        if (evt.EventType == EventType.Webinar)
+        {
+            return evt.GetCurrentState() != EventState.Finished;
+        }
+
         var state = evt.GetCurrentState();
         var isRegistered = IsUserRegistered(evt);
         var isFull = evt.GetCurrentRegistrationCount() >= evt.MaxCapacity;
@@ -178,10 +215,10 @@ else
     }
 
     private List<Event> GetActiveEvents()
-        => allEvents.Where(IsEventActive).OrderBy(e => e.StartDateUtc).ToList();
+        => ApplyTypeFilter(allEvents.Where(IsEventActive).OrderBy(e => e.StartDateUtc).ToList());
 
     private List<Event> GetPastOrFullEvents()
-        => allEvents.Where(e => !IsEventActive(e)).OrderByDescending(e => e.StartDateUtc).ToList();
+        => ApplyTypeFilter(allEvents.Where(e => !IsEventActive(e)).OrderByDescending(e => e.StartDateUtc).ToList());
 
     public void Dispose()
     {

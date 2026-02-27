@@ -1,6 +1,7 @@
 @page "/admin/events/create"
 @page "/admin/events/edit/{EventId:int}"
 @using EventCenter.Web.Domain.Entities
+@using EventCenter.Web.Domain.Enums
 @using EventCenter.Web.Services
 @using EventCenter.Web.Infrastructure.Helpers
 @using Microsoft.AspNetCore.Authorization
@@ -41,6 +42,14 @@
                     </div>
                     <div class="card-body">
                         <div class="mb-3">
+                            <label class="form-label">Veranstaltungstyp *</label>
+                            <InputSelect @bind-Value="Model.EventType" class="form-select" @bind-Value:after="OnEventTypeChanged">
+                                <option value="@EventType.InPerson">Präsenzveranstaltung</option>
+                                <option value="@EventType.Webinar">Webinar</option>
+                            </InputSelect>
+                        </div>
+
+                        <div class="mb-3">
                             <label for="title" class="form-label">Titel *</label>
                             <InputText id="title" class="form-control" @bind-Value="Model.Title" />
                             <ValidationMessage For="@(() => Model.Title)" />
@@ -58,19 +67,33 @@
                             <ValidationMessage For="@(() => Model.Location)" />
                         </div>
 
-                        <div class="row">
-                            <div class="col-md-6 mb-3">
-                                <label for="maxCapacity" class="form-label">Maximale Kapazität</label>
-                                <InputNumber id="maxCapacity" class="form-control" @bind-Value="Model.MaxCapacity" />
-                                <ValidationMessage For="@(() => Model.MaxCapacity)" />
+                        @if (Model.EventType == EventType.Webinar)
+                        {
+                            <div class="mb-3">
+                                <label for="extUrl" class="form-label">Externe Anmelde-URL</label>
+                                <InputText id="extUrl" class="form-control" @bind-Value="Model.ExternalRegistrationUrl"
+                                           placeholder="https://..." />
+                                <ValidationMessage For="@(() => Model.ExternalRegistrationUrl)" />
+                                <div class="form-text text-muted">Erforderlich zum Veröffentlichen. Kann als Entwurf ohne URL gespeichert werden.</div>
                             </div>
+                        }
 
-                            <div class="col-md-6 mb-3">
-                                <label for="maxCompanions" class="form-label">Maximale Begleitpersonen</label>
-                                <InputNumber id="maxCompanions" class="form-control" @bind-Value="Model.MaxCompanions" />
-                                <ValidationMessage For="@(() => Model.MaxCompanions)" />
+                        @if (Model.EventType == EventType.InPerson)
+                        {
+                            <div class="row">
+                                <div class="col-md-6 mb-3">
+                                    <label for="maxCapacity" class="form-label">Maximale Kapazität</label>
+                                    <InputNumber id="maxCapacity" class="form-control" @bind-Value="Model.MaxCapacity" />
+                                    <ValidationMessage For="@(() => Model.MaxCapacity)" />
+                                </div>
+
+                                <div class="col-md-6 mb-3">
+                                    <label for="maxCompanions" class="form-label">Maximale Begleitpersonen</label>
+                                    <InputNumber id="maxCompanions" class="form-control" @bind-Value="Model.MaxCompanions" />
+                                    <ValidationMessage For="@(() => Model.MaxCompanions)" />
+                                </div>
                             </div>
-                        </div>
+                        }
                     </div>
                 </div>
 
@@ -92,11 +115,14 @@
                             <ValidationMessage For="@(() => Model.EndDateUtc)" />
                         </div>
 
-                        <div class="mb-3">
-                            <label for="registrationDeadline" class="form-label">Anmeldefrist (CET) *</label>
-                            <input type="datetime-local" id="registrationDeadline" class="form-control" @bind="registrationDeadlineCet" />
-                            <ValidationMessage For="@(() => Model.RegistrationDeadlineUtc)" />
-                        </div>
+                        @if (Model.EventType == EventType.InPerson)
+                        {
+                            <div class="mb-3">
+                                <label for="registrationDeadline" class="form-label">Anmeldefrist (CET) *</label>
+                                <input type="datetime-local" id="registrationDeadline" class="form-control" @bind="registrationDeadlineCet" />
+                                <ValidationMessage For="@(() => Model.RegistrationDeadlineUtc)" />
+                            </div>
+                        }
                     </div>
                 </div>
 
@@ -162,6 +188,8 @@
                 </div>
 
                 <!-- Section 5: Agendapunkte (Agenda Items) -->
+                @if (Model.EventType == EventType.InPerson)
+                {
                 <div class="card mb-4">
                     <div class="card-header d-flex justify-content-between align-items-center">
                         <h4 class="mb-0">Agendapunkte</h4>
@@ -264,8 +292,11 @@
                         }
                     </div>
                 </div>
+                }
 
                 <!-- Section 6: Zusatzoptionen (Extra Options) -->
+                @if (Model.EventType == EventType.InPerson)
+                {
                 <div class="card mb-4">
                     <div class="card-header d-flex justify-content-between align-items-center">
                         <h4 class="mb-0">Zusatzoptionen</h4>
@@ -319,6 +350,7 @@
                         }
                     </div>
                 </div>
+                }
 
                 <!-- Form Buttons -->
                 <div class="d-flex justify-content-between mb-4">
@@ -362,6 +394,18 @@
     // Track removed items for deletion
     private List<int> removedAgendaItemIds = new();
     private List<int> removedOptionIds = new();
+
+    private void OnEventTypeChanged()
+    {
+        if (Model.EventType == EventType.Webinar)
+        {
+            Model.MaxCapacity = 0;
+            Model.MaxCompanions = 0;
+            Model.AgendaItems.Clear();
+            agendaItemDatesCet.Clear();
+            Model.EventOptions.Clear();
+        }
+    }
 
     protected override async Task OnInitializedAsync()
     {
