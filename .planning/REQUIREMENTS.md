@@ -44,11 +44,11 @@
 
 ### Teilnehmerverwaltung (Admin)
 
-- [ ] **PART-01**: Admin kann Teilnehmerliste einer Firma einsehen (US-11)
-- [ ] **PART-02**: Admin kann Teilnehmerliste als Excel exportieren (US-12)
-- [ ] **PART-03**: Admin kann Kontaktdaten als Excel exportieren (US-12)
-- [ ] **PART-04**: Admin kann nicht-teilnehmende Mitglieder exportieren (US-12)
-- [ ] **PART-05**: Admin kann Firmenliste als Excel/CSV exportieren (US-12)
+- [x] **PART-01**: Admin kann Teilnehmerliste einer Firma einsehen (US-11)
+- [x] **PART-02**: Admin kann Teilnehmerliste als Excel exportieren (US-12)
+- [x] **PART-03**: Admin kann Kontaktdaten als Excel exportieren (US-12)
+- [x] **PART-04**: Admin kann nicht-teilnehmende Mitglieder exportieren (US-12)
+- [x] **PART-05**: Admin kann Firmenliste als Excel/CSV exportieren (US-12)
 
 ### Veranstaltungsübersicht (Makler)
 
@@ -145,11 +145,11 @@
 | COMP-03 | Phase 4 | Complete |
 | COMP-04 | Phase 4 | Complete |
 | COMP-05 | Phase 4 | Complete |
-| PART-01 | Phase 7 | Pending |
-| PART-02 | Phase 7 | Pending |
-| PART-03 | Phase 7 | Pending |
-| PART-04 | Phase 7 | Pending |
-| PART-05 | Phase 7 | Pending |
+| PART-01 | Phase 7 | Complete |
+| PART-02 | Phase 7 | Complete |
+| PART-03 | Phase 7 | Complete |
+| PART-04 | Phase 7 | Complete |
+| PART-05 | Phase 7 | Complete |
 | MLST-01 | Phase 3 | Complete |
 | MLST-02 | Phase 3 | Complete |
 | MLST-03 | Phase 3 | Complete |

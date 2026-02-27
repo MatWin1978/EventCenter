@@ -3,12 +3,12 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: unknown
-last_updated: "2026-02-27T15:38:08.360Z"
+last_updated: "2026-02-27T15:24:38Z"
 progress:
   total_phases: 7
   completed_phases: 6
   total_plans: 25
-  completed_plans: 22
+  completed_plans: 23
 ---
 
 # Project State
@@ -23,11 +23,11 @@ See: .planning/PROJECT.md (updated 2026-02-26)
 ## Current Position
 
 Phase: 7 of 8 (Cancellation & Participant Management)
-Plan: 1 of 4
+Plan: 2 of 4
 Status: In Progress
-Last activity: 2026-02-27 - Completed plan 07-01 (Cancellation Service Logic)
+Last activity: 2026-02-27 - Completed plan 07-02 (Participant Export & Query Services)
 
-Progress: [██████████] 88.0% (6/8 phases, 22/25 plans completed)
+Progress: [██████████] 92.0% (6/8 phases, 23/25 plans completed)
 
 ## Performance Metrics
 
@@ -51,6 +51,7 @@ Progress: [██████████] 88.0% (6/8 phases, 22/25 plans comple
 
 | Phase-Plan | Duration | Tasks | Files | Date |
 |------------|----------|-------|-------|------|
+| 07-02 | 280s (4.7m) | 2 | 5 | 2026-02-27 |
 | 07-01 | 241s (4.0m) | 2 | 7 | 2026-02-27 |
 | 06-02 | 446s (7.4m) | 2 | 3 | 2026-02-27 |
 | 06-01 | 905s (15.1m) | 3 | 10 | 2026-02-27 |
@@ -142,6 +143,9 @@ Recent decisions affecting current work:
 - [Phase 07-01]: Cancelling broker registration does NOT cascade to guest registrations (per locked user decision)
 - [Phase 07-01]: CancellationReason stored as nullable string for audit trail
 - [Phase 07-01]: Deadline check uses GetCurrentState() == EventState.Public (consistent with registration state machine)
+- [Phase 07-02]: RegistrationType.CompanyParticipant maps to "Firma" in export (actual enum value vs plan spec)
+- [Phase 07-02]: InvitationStatus has no NonParticipation value - IsNonParticipation is a boolean field on EventCompany
+- [Phase 07-02]: Excel exports use anonymous type projection for German column headers with ClosedXML InsertTable
 
 ### Pending Todos
 
@@ -160,5 +164,5 @@ None yet.
 ## Session Continuity
 
 Last session: 2026-02-27
-Stopped at: Completed 07-01-PLAN.md execution
-Resume file: .planning/phases/07-cancellation-participant-management/07-01-SUMMARY.md
+Stopped at: Completed 07-02-PLAN.md execution
+Resume file: .planning/phases/07-cancellation-participant-management/07-02-SUMMARY.md
