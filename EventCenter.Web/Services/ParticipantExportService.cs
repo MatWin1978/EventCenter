@@ -24,6 +24,9 @@ public class ParticipantExportService
     {
         var registrations = await _context.Registrations
             .Include(r => r.EventCompany)
+            .Include(r => r.RegistrationAgendaItems)
+                .ThenInclude(rai => rai.AgendaItem)
+            .Include(r => r.SelectedOptions)
             .Where(r => r.EventId == eventId && !r.IsCancelled)
             .OrderBy(r => r.LastName)
             .ThenBy(r => r.FirstName)
@@ -36,6 +39,8 @@ public class ParticipantExportService
             EMail = r.Email,
             Firma = r.EventCompany?.CompanyName ?? r.Company ?? "N/A",
             Typ = MapRegistrationType(r.RegistrationType),
+            Agendapunkte = string.Join(", ", r.RegistrationAgendaItems.Select(a => a.AgendaItem.Title)),
+            Zusatzoptionen = string.Join(", ", r.SelectedOptions.Select(o => o.Name)),
             Anmeldedatum = TimeZoneHelper.FormatDateTimeCet(r.RegistrationDateUtc, "dd.MM.yyyy HH:mm")
         }).ToList();
 
@@ -57,6 +62,9 @@ public class ParticipantExportService
     {
         var registrations = await _context.Registrations
             .Include(r => r.EventCompany)
+            .Include(r => r.RegistrationAgendaItems)
+                .ThenInclude(rai => rai.AgendaItem)
+            .Include(r => r.SelectedOptions)
             .Where(r => r.EventId == eventId && !r.IsCancelled)
             .OrderBy(r => r.LastName)
             .ThenBy(r => r.FirstName)
@@ -68,7 +76,9 @@ public class ParticipantExportService
             Nachname = r.LastName,
             EMail = r.Email,
             Telefon = r.Phone ?? "N/A",
-            Firma = r.EventCompany?.CompanyName ?? r.Company ?? "N/A"
+            Firma = r.EventCompany?.CompanyName ?? r.Company ?? "N/A",
+            Agendapunkte = string.Join(", ", r.RegistrationAgendaItems.Select(a => a.AgendaItem.Title)),
+            Zusatzoptionen = string.Join(", ", r.SelectedOptions.Select(o => o.Name))
         }).ToList();
 
         using var workbook = new XLWorkbook();

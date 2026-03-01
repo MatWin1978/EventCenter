@@ -23,6 +23,7 @@ public class ParticipantQueryService
             .Include(r => r.EventCompany)
             .Include(r => r.RegistrationAgendaItems)
                 .ThenInclude(rai => rai.AgendaItem)
+            .Include(r => r.SelectedOptions)
             .Where(r => r.EventId == eventId)
             .OrderBy(r => r.LastName)
             .ThenBy(r => r.FirstName)

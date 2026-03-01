@@ -103,6 +103,8 @@
                             <th>E-Mail</th>
                             <th>Firma</th>
                             <th>Typ</th>
+                            <th>Agendapunkte</th>
+                            <th>Zusatzoptionen</th>
                             <th>Status</th>
                             <th>Stornierungsgrund</th>
                         </tr>
@@ -126,6 +128,26 @@
                                         case RegistrationType.CompanyParticipant:
                                             <span class="badge bg-warning text-dark">Firma</span>
                                             break;
+                                    }
+                                </td>
+                                <td>
+                                    @if (p.RegistrationAgendaItems.Any())
+                                    {
+                                        <small>@string.Join(", ", p.RegistrationAgendaItems.Select(a => a.AgendaItem.Title))</small>
+                                    }
+                                    else
+                                    {
+                                        <span class="text-muted">–</span>
+                                    }
+                                </td>
+                                <td>
+                                    @if (p.SelectedOptions.Any())
+                                    {
+                                        <small>@string.Join(", ", p.SelectedOptions.Select(o => o.Name))</small>
+                                    }
+                                    else
+                                    {
+                                        <span class="text-muted">–</span>
                                     }
                                 </td>
                                 <td>
