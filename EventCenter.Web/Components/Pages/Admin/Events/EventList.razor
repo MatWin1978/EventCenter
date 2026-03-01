@@ -146,6 +146,9 @@
                                     <a href="/admin/events/@evt.Id/participants" class="btn btn-outline-info">
                                         <span class="bi bi-people"></span> Teilnehmer
                                     </a>
+                                    <a href="/admin/events/@evt.Id/companies" class="btn btn-outline-secondary">
+                                        <span class="bi bi-building"></span> Firmen
+                                    </a>
                                     <button class="btn btn-outline-primary" @onclick="@(() => NavigationManager.NavigateTo($"/admin/events/edit/{evt.Id}"))">
                                         <span class="bi bi-pencil"></span> Bearbeiten
                                     </button>

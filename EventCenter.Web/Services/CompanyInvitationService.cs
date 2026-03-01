@@ -91,107 +91,91 @@ public class CompanyInvitationService
             return (false, null, "Diese Firma wurde bereits eingeladen.");
         }
 
-        using var transaction = await _context.Database.BeginTransactionAsync();
+        EventCompany? createdInvitation = null;
 
-        try
+        var strategy = _context.Database.CreateExecutionStrategy();
+        await strategy.ExecuteAsync(async () =>
         {
-            // Create invitation
-            var invitation = new EventCompany
+            using var transaction = await _context.Database.BeginTransactionAsync();
+            try
             {
-                EventId = formModel.EventId,
-                CompanyName = formModel.CompanyName,
-                ContactEmail = formModel.ContactEmail,
-                ContactPhone = formModel.ContactPhone,
-                InvitationCode = GenerateSecureInvitationCode(),
-                PercentageDiscount = formModel.PercentageDiscount,
-                PersonalMessage = formModel.PersonalMessage,
-                Status = formModel.SendImmediately ? InvitationStatus.Sent : InvitationStatus.Draft,
-                InvitationSentUtc = formModel.SendImmediately ? DateTime.UtcNow : null
-            };
-
-            _context.EventCompanies.Add(invitation);
-            await _context.SaveChangesAsync();
-
-            // Create agenda item prices
-            foreach (var priceModel in formModel.AgendaItemPrices)
-            {
-                var agendaItem = evt.AgendaItems.FirstOrDefault(a => a.Id == priceModel.AgendaItemId);
-                if (agendaItem == null) continue;
-
-                var customPrice = CalculateCustomPrice(
-                    priceModel.BasePrice,
-                    formModel.PercentageDiscount,
-                    priceModel.ManualOverride);
-
-                // Only store if different from base price
-                if (customPrice != priceModel.BasePrice)
+                var invitation = new EventCompany
                 {
-                    var agendaPrice = new EventCompanyAgendaItemPrice
+                    EventId = formModel.EventId,
+                    CompanyName = formModel.CompanyName,
+                    ContactEmail = formModel.ContactEmail,
+                    ContactPhone = formModel.ContactPhone,
+                    InvitationCode = GenerateSecureInvitationCode(),
+                    PercentageDiscount = formModel.PercentageDiscount,
+                    PersonalMessage = formModel.PersonalMessage,
+                    Status = formModel.SendImmediately ? InvitationStatus.Sent : InvitationStatus.Draft,
+                    InvitationSentUtc = formModel.SendImmediately ? DateTime.UtcNow : null
+                };
+
+                _context.EventCompanies.Add(invitation);
+                await _context.SaveChangesAsync();
+
+                foreach (var priceModel in formModel.AgendaItemPrices)
+                {
+                    var agendaItem = evt.AgendaItems.FirstOrDefault(a => a.Id == priceModel.AgendaItemId);
+                    if (agendaItem == null) continue;
+
+                    var customPrice = CalculateCustomPrice(
+                        priceModel.BasePrice,
+                        formModel.PercentageDiscount,
+                        priceModel.ManualOverride);
+
+                    _context.EventCompanyAgendaItemPrices.Add(new EventCompanyAgendaItemPrice
                     {
                         EventCompanyId = invitation.Id,
                         AgendaItemId = priceModel.AgendaItemId,
                         CustomPrice = customPrice
-                    };
-
-                    _context.EventCompanyAgendaItemPrices.Add(agendaPrice);
+                    });
                 }
-                else
-                {
-                    // Always store pricing entries for tracking
-                    var agendaPrice = new EventCompanyAgendaItemPrice
-                    {
-                        EventCompanyId = invitation.Id,
-                        AgendaItemId = priceModel.AgendaItemId,
-                        CustomPrice = customPrice
-                    };
 
-                    _context.EventCompanyAgendaItemPrices.Add(agendaPrice);
-                }
+                await _context.SaveChangesAsync();
+                await transaction.CommitAsync();
+                createdInvitation = invitation;
             }
-
-            await _context.SaveChangesAsync();
-            await transaction.CommitAsync();
-
-            // Fire-and-forget email sending if SendImmediately
-            if (formModel.SendImmediately)
+            catch (Exception ex)
             {
-                _ = Task.Run(async () =>
-                {
-                    try
-                    {
-                        var invitationLink = BuildInvitationLink(invitation.InvitationCode!);
-                        var personalMessage = formModel.PersonalMessage ?? string.Empty;
-
-                        // Reload invitation with agenda item prices for email
-                        var invitationForEmail = await _context.EventCompanies
-                            .Include(ec => ec.AgendaItemPrices)
-                                .ThenInclude(aip => aip.AgendaItem)
-                            .FirstAsync(ec => ec.Id == invitation.Id);
-
-                        await _emailSender.SendCompanyInvitationAsync(
-                            invitationForEmail,
-                            evt,
-                            personalMessage,
-                            invitationLink);
-                    }
-                    catch (Exception ex)
-                    {
-                        _logger.LogError(ex,
-                            "Failed to send company invitation email to {Email} for event {EventId}",
-                            invitation.ContactEmail,
-                            formModel.EventId);
-                    }
-                });
+                await transaction.RollbackAsync();
+                _logger.LogError(ex, "Failed to create company invitation for event {EventId}", formModel.EventId);
+                throw;
             }
+        });
 
-            return (true, invitation.Id, null);
-        }
-        catch (Exception ex)
+        if (formModel.SendImmediately && createdInvitation != null)
         {
-            await transaction.RollbackAsync();
-            _logger.LogError(ex, "Failed to create company invitation for event {EventId}", formModel.EventId);
-            throw;
+            _ = Task.Run(async () =>
+            {
+                try
+                {
+                    var invitationLink = BuildInvitationLink(createdInvitation.InvitationCode!);
+                    var personalMessage = formModel.PersonalMessage ?? string.Empty;
+
+                    var invitationForEmail = await _context.EventCompanies
+                        .Include(ec => ec.AgendaItemPrices)
+                            .ThenInclude(aip => aip.AgendaItem)
+                        .FirstAsync(ec => ec.Id == createdInvitation.Id);
+
+                    await _emailSender.SendCompanyInvitationAsync(
+                        invitationForEmail,
+                        evt,
+                        personalMessage,
+                        invitationLink);
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogError(ex,
+                        "Failed to send company invitation email to {Email} for event {EventId}",
+                        createdInvitation.ContactEmail,
+                        formModel.EventId);
+                }
+            });
         }
+
+        return (true, createdInvitation!.Id, null);
     }
 
     /// <summary>
@@ -321,52 +305,50 @@ public class CompanyInvitationService
             return (false, "Veranstaltung nicht gefunden.");
         }
 
-        using var transaction = await _context.Database.BeginTransactionAsync();
-
-        try
+        var strategy = _context.Database.CreateExecutionStrategy();
+        await strategy.ExecuteAsync(async () =>
         {
-            // Update basic details
-            invitation.CompanyName = formModel.CompanyName;
-            invitation.ContactEmail = formModel.ContactEmail;
-            invitation.ContactPhone = formModel.ContactPhone;
-            invitation.PercentageDiscount = formModel.PercentageDiscount;
-            invitation.PersonalMessage = formModel.PersonalMessage;
-
-            // Remove old agenda item prices
-            _context.EventCompanyAgendaItemPrices.RemoveRange(invitation.AgendaItemPrices);
-
-            // Add new agenda item prices
-            foreach (var priceModel in formModel.AgendaItemPrices)
+            using var transaction = await _context.Database.BeginTransactionAsync();
+            try
             {
-                var agendaItem = evt.AgendaItems.FirstOrDefault(a => a.Id == priceModel.AgendaItemId);
-                if (agendaItem == null) continue;
+                invitation.CompanyName = formModel.CompanyName;
+                invitation.ContactEmail = formModel.ContactEmail;
+                invitation.ContactPhone = formModel.ContactPhone;
+                invitation.PercentageDiscount = formModel.PercentageDiscount;
+                invitation.PersonalMessage = formModel.PersonalMessage;
 
-                var customPrice = CalculateCustomPrice(
-                    priceModel.BasePrice,
-                    formModel.PercentageDiscount,
-                    priceModel.ManualOverride);
+                _context.EventCompanyAgendaItemPrices.RemoveRange(invitation.AgendaItemPrices);
 
-                var agendaPrice = new EventCompanyAgendaItemPrice
+                foreach (var priceModel in formModel.AgendaItemPrices)
                 {
-                    EventCompanyId = invitation.Id,
-                    AgendaItemId = priceModel.AgendaItemId,
-                    CustomPrice = customPrice
-                };
+                    var agendaItem = evt.AgendaItems.FirstOrDefault(a => a.Id == priceModel.AgendaItemId);
+                    if (agendaItem == null) continue;
 
-                _context.EventCompanyAgendaItemPrices.Add(agendaPrice);
+                    var customPrice = CalculateCustomPrice(
+                        priceModel.BasePrice,
+                        formModel.PercentageDiscount,
+                        priceModel.ManualOverride);
+
+                    _context.EventCompanyAgendaItemPrices.Add(new EventCompanyAgendaItemPrice
+                    {
+                        EventCompanyId = invitation.Id,
+                        AgendaItemId = priceModel.AgendaItemId,
+                        CustomPrice = customPrice
+                    });
+                }
+
+                await _context.SaveChangesAsync();
+                await transaction.CommitAsync();
             }
+            catch (Exception ex)
+            {
+                await transaction.RollbackAsync();
+                _logger.LogError(ex, "Failed to update company invitation {InvitationId}", invitationId);
+                throw;
+            }
+        });
 
-            await _context.SaveChangesAsync();
-            await transaction.CommitAsync();
-
-            return (true, null);
-        }
-        catch (Exception ex)
-        {
-            await transaction.RollbackAsync();
-            _logger.LogError(ex, "Failed to update company invitation {InvitationId}", invitationId);
-            throw;
-        }
+        return (true, null);
     }
 
     /// <summary>

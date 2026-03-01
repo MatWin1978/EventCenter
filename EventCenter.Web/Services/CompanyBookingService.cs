@@ -104,6 +104,9 @@ public class CompanyBookingService
             return (false, "Diese Einladung kann nicht mehr gebucht werden.");
         }
 
+        var strategy = _context.Database.CreateExecutionStrategy();
+        return await strategy.ExecuteAsync<(bool Success, string? ErrorMessage)>(async () =>
+        {
         using var transaction = await _context.Database.BeginTransactionAsync();
 
         try
@@ -189,6 +192,7 @@ public class CompanyBookingService
             _logger.LogError(ex, "Failed to submit booking for company {CompanyId}", eventCompanyId);
             throw;
         }
+        }); // end ExecuteAsync
     }
 
     /// <summary>

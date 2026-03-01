@@ -37,6 +37,9 @@ public class RegistrationService
         string? company,
         List<int> selectedAgendaItemIds)
     {
+        var strategy = _context.Database.CreateExecutionStrategy();
+        return await strategy.ExecuteAsync<(bool Success, int? RegistrationId, string? ErrorMessage)>(async () =>
+        {
         using var transaction = await _context.Database.BeginTransactionAsync();
 
         try
@@ -152,6 +155,7 @@ public class RegistrationService
             _logger.LogError(ex, "Error during registration for event {EventId}", eventId);
             return (false, null, "Ein Fehler ist aufgetreten. Bitte versuchen Sie es später erneut.");
         }
+        }); // end ExecuteAsync
     }
 
     /// <summary>
@@ -188,6 +192,9 @@ public class RegistrationService
         string relationshipType,
         List<int> selectedAgendaItemIds)
     {
+        var strategy = _context.Database.CreateExecutionStrategy();
+        return await strategy.ExecuteAsync<(bool Success, int? GuestRegistrationId, string? ErrorMessage)>(async () =>
+        {
         using var transaction = await _context.Database.BeginTransactionAsync();
 
         try
@@ -313,6 +320,7 @@ public class RegistrationService
             _logger.LogError(ex, "Error during guest registration for broker registration {BrokerRegistrationId}", brokerRegistrationId);
             return (false, null, "Ein Fehler ist aufgetreten. Bitte versuchen Sie es später erneut.");
         }
+        }); // end ExecuteAsync
     }
 
     /// <summary>
