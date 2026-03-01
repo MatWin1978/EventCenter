@@ -167,6 +167,10 @@ Recent decisions affecting current work:
 - [Phase 08-03]: GetStatusBadge webinar guard returns early before capacity/deadline checks - prevents false Ausgebucht for MaxCapacity=0 webinars
 - [Phase 08-03]: iCal export button placed outside webinar/else conditional - visible for all event types including webinars
 
+### Roadmap Evolution
+
+- Phase 9 added: Navigation & Makler-Registrierungsübersicht — Role-basierter Redirect nach Login, funktionale Admin/Portal-Navigation, Makler-Registrierungsübersicht mit Buchungsdetailseite
+
 ### Pending Todos
 
 None yet.
