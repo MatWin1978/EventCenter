@@ -409,4 +409,27 @@ public class RegistrationService
             .OrderBy(r => r.RegistrationDateUtc)
             .ToListAsync();
     }
+
+    /// <summary>
+    /// Gets all broker registrations for the given email address, including event details,
+    /// agenda items, selected options, and guest registrations (with their agenda items).
+    /// Cancelled registrations are included — callers display them with a "Storniert" badge.
+    /// </summary>
+    public async Task<List<Registration>> GetBrokerRegistrationsAsync(string brokerEmail)
+    {
+        return await _context.Registrations
+            .Include(r => r.Event)
+            .Include(r => r.RegistrationAgendaItems)
+                .ThenInclude(rai => rai.AgendaItem)
+            .Include(r => r.SelectedOptions)
+            .Include(r => r.GuestRegistrations)
+                .ThenInclude(g => g.RegistrationAgendaItems)
+                    .ThenInclude(rai => rai.AgendaItem)
+            .Where(r =>
+                r.Email == brokerEmail &&
+                r.RegistrationType == RegistrationType.Makler &&
+                r.ParentRegistrationId == null)
+            .OrderByDescending(r => r.RegistrationDateUtc)
+            .ToListAsync();
+    }
 }
