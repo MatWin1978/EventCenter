@@ -791,6 +791,8 @@ public class RegistrationServiceTests : IDisposable
             null,
             new List<int> { agendaItem1.Id }
         );
+        // Allow fire-and-forget email task to complete before next DB operation
+        await Task.Delay(100);
 
         // Act
         var guestResult = await _service.RegisterGuestAsync(
@@ -1435,6 +1437,8 @@ public class RegistrationServiceTests : IDisposable
             null,
             new List<int> { agendaItem.Id }
         );
+        // Allow fire-and-forget email task to complete before next DB operation
+        await Task.Delay(100);
 
         // Create two guests
         var guest1Result = await _service.RegisterGuestAsync(
@@ -1446,6 +1450,8 @@ public class RegistrationServiceTests : IDisposable
             "Ehepartner",
             new List<int> { agendaItem.Id }
         );
+        // Allow fire-and-forget email task to complete before next DB operation
+        await Task.Delay(100);
 
         var guest2Result = await _service.RegisterGuestAsync(
             brokerResult.RegistrationId!.Value,

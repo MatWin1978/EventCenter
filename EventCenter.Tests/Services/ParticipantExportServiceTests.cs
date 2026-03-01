@@ -93,7 +93,9 @@ public class ParticipantExportServiceTests : IDisposable
         Assert.Equal("EMail", ws.Cell(1, 3).Value.ToString());
         Assert.Equal("Firma", ws.Cell(1, 4).Value.ToString());
         Assert.Equal("Typ", ws.Cell(1, 5).Value.ToString());
-        Assert.Equal("Anmeldedatum", ws.Cell(1, 6).Value.ToString());
+        Assert.Equal("Agendapunkte", ws.Cell(1, 6).Value.ToString());
+        Assert.Equal("Zusatzoptionen", ws.Cell(1, 7).Value.ToString());
+        Assert.Equal("Anmeldedatum", ws.Cell(1, 8).Value.ToString());
     }
 
     [Fact]
