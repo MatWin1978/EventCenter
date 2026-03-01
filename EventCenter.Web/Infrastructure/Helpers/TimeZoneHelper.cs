@@ -9,7 +9,10 @@ public static class TimeZoneHelper
 
     public static DateTime ConvertUtcToCet(DateTime utcDateTime)
     {
-        if (utcDateTime.Kind != DateTimeKind.Utc)
+        // EF Core / SQL Server returns DateTimeKind.Unspecified — treat as UTC
+        if (utcDateTime.Kind == DateTimeKind.Unspecified)
+            utcDateTime = DateTime.SpecifyKind(utcDateTime, DateTimeKind.Utc);
+        else if (utcDateTime.Kind != DateTimeKind.Utc)
             throw new ArgumentException("DateTime must be UTC", nameof(utcDateTime));
 
         return TimeZoneInfo.ConvertTimeFromUtc(utcDateTime, CetTimeZone);
