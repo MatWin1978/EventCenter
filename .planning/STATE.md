@@ -3,12 +3,12 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: unknown
-last_updated: "2026-03-01T15:06:22.237Z"
+last_updated: "2026-03-01T22:00:00.000Z"
 progress:
-  total_phases: 9
-  completed_phases: 9
-  total_plans: 30
-  completed_plans: 30
+  total_phases: 10
+  completed_phases: 10
+  total_plans: 31
+  completed_plans: 31
 ---
 
 # Project State
@@ -18,16 +18,16 @@ progress:
 See: .planning/PROJECT.md (updated 2026-02-26)
 
 **Core value:** Makler und eingeladene Firmen können sich reibungslos für Veranstaltungen anmelden, Agendapunkte auswählen und ihre Teilnahme verwalten.
-**Current focus:** Phase 9 - Navigation & Makler-Registrierungsübersicht
+**Current focus:** Phase 10 complete — all v1 phases done
 
 ## Current Position
 
-Phase: 9 of 9 (Navigation & Makler-Registrierungsübersicht)
-Plan: 1 of 2 (in progress)
-Status: Phase 9 plan 1 complete - plan 2 pending
-Last activity: 2026-03-01 - Completed plan 09-01 (Home.razor role-based redirect, GetBrokerRegistrationsAsync)
+Phase: 10 of 10 (Firmenstammdaten — Company Address Book)
+Plan: 1 of 1 (complete)
+Status: All phases complete
+Last activity: 2026-03-01 - Completed plan 10-01 (Company entity, CompanyService, Admin UI, Einladungsformular-Umbau)
 
-Progress: [█████████▌] 97% (8/9 phases full, 29/30 plans completed)
+Progress: [██████████] 100% (10/10 phases full, 31/31 plans completed)
 
 ## Performance Metrics
 
@@ -172,10 +172,15 @@ Recent decisions affecting current work:
 - [Phase 09-01]: forceLoad: false for all NavigateTo calls in Home.razor: keeps Blazor circuit alive
 - [Phase 09-01]: Cancelled registrations included in GetBrokerRegistrationsAsync: UI shows Storniert badge per locked decision
 - [Phase 09]: Cards are purely informational on RegistrationList — no action buttons; all actions on EventDetail page
+- [Phase 10]: CompanyId nullable FK on EventCompany for backwards compatibility — existing invitations without address book entry remain valid
+- [Phase 10]: Autocomplete via Blazor @oninput + CompanyService.SearchAsync (no additional JS package needed)
+- [Phase 10]: Batch mode uses <select> dropdown (all companies loaded once) instead of per-row autocomplete for cleaner UX
+- [Phase 10]: DeleteAsync blocks deletion when company has linked EventCompanies (German error message returned)
 
 ### Roadmap Evolution
 
 - Phase 9 added: Navigation & Makler-Registrierungsübersicht — Role-basierter Redirect nach Login, funktionale Admin/Portal-Navigation, Makler-Registrierungsübersicht mit Buchungsdetailseite
+- Phase 10 added: Firmenstammdaten (Company Address Book) — Zentrales Firmenadressbuch mit Admin-CRUD und Autocomplete-Auswahl im Einladungsformular
 
 ### Pending Todos
 
@@ -194,5 +199,5 @@ None yet.
 ## Session Continuity
 
 Last session: 2026-03-01
-Stopped at: Completed 09-01-PLAN.md (Phase 9 Plan 1 complete)
-Resume file: .planning/phases/09-navigation-makler-registrierungs-bersicht/09-01-SUMMARY.md
+Stopped at: Completed 10-01 (Phase 10 complete — all v1 phases done)
+Resume file: .planning/phases/10-firmenstammdaten/10-01-SUMMARY.md

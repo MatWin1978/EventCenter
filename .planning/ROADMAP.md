@@ -192,3 +192,13 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6 → 7 → 8
 Plans:
 - [ ] 09-01-PLAN.md — Home.razor smart redirect + GetBrokerRegistrationsAsync service method
 - [ ] 09-02-PLAN.md — /portal/registrations page with registration cards, empty state, and human-verify checkpoint
+
+### Phase 10: Firmenstammdaten (Company Address Book)
+
+**Goal:** Zentrales Firmenadressbuch damit Admins Firmen einmalig anlegen und bei Einladungen aus dem Adressbuch wählen können
+**Requirements**: FIRM-01, FIRM-02, FIRM-03, FIRM-04, FIRM-05
+**Depends on:** Phase 4 (Firmeneinladungen)
+**Plans:** 1/1 plans complete (completed 2026-03-01)
+
+Plans:
+- [x] 10-01 — Company entity + Migration + CompanyService + CompanyValidator + Admin-UI (List/Form) + Einladungsformular-Umbau

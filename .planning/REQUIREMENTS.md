@@ -34,6 +34,14 @@
 - [x] **XOPT-01**: Admin kann Zusatzoptionen anlegen, bearbeiten und löschen (US-07)
 - [x] **XOPT-02**: System verhindert Löschen bereits gebuchter Zusatzoptionen
 
+### Firmenstammdaten (Admin)
+
+- [x] **FIRM-01**: Admin kann Firma im zentralen Adressbuch anlegen (Name, E-Mail, Telefon, Ansprechpartner, Adresse, Notizen)
+- [x] **FIRM-02**: Admin kann Firmenstammdaten bearbeiten und löschen (Löschen nur ohne verknüpfte Einladungen)
+- [x] **FIRM-03**: Admin wählt beim Erstellen einer Einladung eine Firma aus dem Adressbuch (Suchfeld mit Autocomplete, kein Freitext)
+- [x] **FIRM-04**: Ausgewählte Firma füllt Einladungsformular automatisch vor (Name, E-Mail, Telefon schreibgeschützt)
+- [x] **FIRM-05**: Einladung speichert CompanyId als FK zum Adressbuch (Rückwärtskompatibilität: nullable)
+
 ### Firmeneinladungen (Admin)
 
 - [x] **COMP-01**: Admin kann Firma zu Veranstaltung einladen (US-08)
