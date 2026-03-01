@@ -1,0 +1,203 @@
+@page "/admin/companies/create"
+@page "/admin/companies/edit/{Id:int}"
+@attribute [Authorize(Roles = "Admin")]
+@layout MainLayout
+@rendermode InteractiveServer
+@using EventCenter.Web.Domain.Entities
+@using EventCenter.Web.Services
+@using Blazored.FluentValidation
+@inject CompanyService CompanyService
+@inject NavigationManager Navigation
+
+<PageTitle>@pageTitle - Admin</PageTitle>
+
+<div class="container-fluid py-4">
+    @if (loading)
+    {
+        <div class="text-center py-5">
+            <div class="spinner-border text-primary" role="status">
+                <span class="visually-hidden">Lädt...</span>
+            </div>
+        </div>
+    }
+    else
+    {
+        <div class="mb-4">
+            <nav aria-label="breadcrumb">
+                <ol class="breadcrumb">
+                    <li class="breadcrumb-item"><a href="/admin">Admin</a></li>
+                    <li class="breadcrumb-item"><a href="/admin/companies">Firmenstammdaten</a></li>
+                    <li class="breadcrumb-item active">@pageTitle</li>
+                </ol>
+            </nav>
+            <h2>@pageTitle</h2>
+        </div>
+
+        @if (!string.IsNullOrEmpty(errorMessage))
+        {
+            <div class="alert alert-danger alert-dismissible fade show" role="alert">
+                @errorMessage
+                <button type="button" class="btn-close" @onclick="() => errorMessage = null"></button>
+            </div>
+        }
+
+        @if (company != null)
+        {
+            <EditForm Model="@company" OnValidSubmit="@HandleValidSubmit">
+                <FluentValidationValidator />
+
+                <div class="card mb-3">
+                    <div class="card-header">
+                        <h5 class="mb-0">Firmendaten</h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label">Firmenname *</label>
+                                <InputText @bind-Value="company.Name" class="form-control" />
+                                <ValidationMessage For="@(() => company.Name)" />
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label">E-Mail *</label>
+                                <InputText @bind-Value="company.ContactEmail" class="form-control" type="email" />
+                                <ValidationMessage For="@(() => company.ContactEmail)" />
+                            </div>
+                        </div>
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label">Telefon</label>
+                                <InputText @bind-Value="company.ContactPhone" class="form-control" />
+                                <ValidationMessage For="@(() => company.ContactPhone)" />
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="card mb-3">
+                    <div class="card-header">
+                        <h5 class="mb-0">Ansprechpartner</h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label">Vorname</label>
+                                <InputText @bind-Value="company.ContactFirstName" class="form-control" />
+                                <ValidationMessage For="@(() => company.ContactFirstName)" />
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label">Nachname</label>
+                                <InputText @bind-Value="company.ContactLastName" class="form-control" />
+                                <ValidationMessage For="@(() => company.ContactLastName)" />
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="card mb-3">
+                    <div class="card-header">
+                        <h5 class="mb-0">Adresse</h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="row">
+                            <div class="col-md-12 mb-3">
+                                <label class="form-label">Straße</label>
+                                <InputText @bind-Value="company.Street" class="form-control" />
+                                <ValidationMessage For="@(() => company.Street)" />
+                            </div>
+                        </div>
+                        <div class="row">
+                            <div class="col-md-3 mb-3">
+                                <label class="form-label">PLZ</label>
+                                <InputText @bind-Value="company.PostalCode" class="form-control" />
+                                <ValidationMessage For="@(() => company.PostalCode)" />
+                            </div>
+                            <div class="col-md-9 mb-3">
+                                <label class="form-label">Ort</label>
+                                <InputText @bind-Value="company.City" class="form-control" />
+                                <ValidationMessage For="@(() => company.City)" />
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="card mb-3">
+                    <div class="card-header">
+                        <h5 class="mb-0">Notizen</h5>
+                    </div>
+                    <div class="card-body">
+                        <InputTextArea @bind-Value="company.Notes" class="form-control" rows="3" placeholder="Interne Notizen..." />
+                        <ValidationMessage For="@(() => company.Notes)" />
+                    </div>
+                </div>
+
+                <div class="d-flex gap-2">
+                    <button type="submit" class="btn btn-primary" disabled="@submitting">
+                        @if (submitting)
+                        {
+                            <span class="spinner-border spinner-border-sm me-2"></span>
+                        }
+                        @(isEdit ? "Speichern" : "Firma anlegen")
+                    </button>
+                    <a href="/admin/companies" class="btn btn-outline-secondary">Abbrechen</a>
+                </div>
+            </EditForm>
+        }
+    }
+</div>
+
+@code {
+    [Parameter]
+    public int? Id { get; set; }
+
+    private Company? company;
+    private bool isEdit;
+    private bool loading = true;
+    private bool submitting = false;
+    private string? errorMessage;
+    private string pageTitle = "";
+
+    protected override async Task OnInitializedAsync()
+    {
+        isEdit = Id.HasValue;
+        pageTitle = isEdit ? "Firma bearbeiten" : "Neue Firma";
+
+        if (isEdit)
+        {
+            company = await CompanyService.GetByIdAsync(Id!.Value);
+            if (company == null)
+                errorMessage = "Firma nicht gefunden.";
+        }
+        else
+        {
+            company = new Company();
+        }
+
+        loading = false;
+    }
+
+    private async Task HandleValidSubmit()
+    {
+        if (company == null) return;
+
+        submitting = true;
+        errorMessage = null;
+
+        try
+        {
+            if (isEdit)
+                await CompanyService.UpdateAsync(company);
+            else
+                await CompanyService.CreateAsync(company);
+
+            Navigation.NavigateTo("/admin/companies");
+        }
+        catch (Exception ex)
+        {
+            errorMessage = $"Fehler beim Speichern: {ex.Message}";
+        }
+        finally
+        {
+            submitting = false;
+        }
+    }
+}

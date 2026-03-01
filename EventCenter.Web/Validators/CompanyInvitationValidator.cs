@@ -7,6 +7,10 @@ public class CompanyInvitationValidator : AbstractValidator<CompanyInvitationFor
 {
     public CompanyInvitationValidator()
     {
+        RuleFor(x => x.CompanyId)
+            .NotNull().WithMessage("Bitte wählen Sie eine Firma aus dem Adressbuch aus")
+            .GreaterThan(0).When(x => x.CompanyId.HasValue).WithMessage("Bitte wählen Sie eine Firma aus dem Adressbuch aus");
+
         RuleFor(x => x.CompanyName)
             .NotEmpty().WithMessage("Firmenname ist erforderlich")
             .MaximumLength(200);

@@ -25,8 +25,12 @@ public class EventCompany
     public DateTime? BookingDateUtc { get; set; }
     public bool IsNonParticipation { get; set; }
 
+    // Company address book FK (nullable for backwards compatibility)
+    public int? CompanyId { get; set; }
+
     // Navigation properties
     public Event Event { get; set; } = null!;
+    public Company? Company { get; set; }
     public ICollection<Registration> Registrations { get; set; } = new List<Registration>();
     public ICollection<EventCompanyAgendaItemPrice> AgendaItemPrices { get; set; } = new List<EventCompanyAgendaItemPrice>();
 }

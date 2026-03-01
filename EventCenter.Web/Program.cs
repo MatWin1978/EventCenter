@@ -49,6 +49,7 @@ builder.Services.AddScoped<CompanyInvitationService>();
 builder.Services.AddScoped<CompanyBookingService>();
 builder.Services.AddScoped<ParticipantQueryService>();
 builder.Services.AddScoped<ParticipantExportService>();
+builder.Services.AddScoped<CompanyService>();
 
 // Email service
 builder.Services.Configure<SmtpSettings>(builder.Configuration.GetSection("Smtp"));

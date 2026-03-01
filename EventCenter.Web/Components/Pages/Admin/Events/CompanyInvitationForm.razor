@@ -4,8 +4,10 @@
 @attribute [Authorize(Policy = "AdminOnly")]
 @rendermode InteractiveServer
 @inject CompanyInvitationService CompanyInvitationService
+@inject CompanyService CompanyService
 @inject EventService EventService
 @inject NavigationManager Navigation
+@using EventCenter.Web.Domain.Entities
 @using EventCenter.Web.Domain.Enums
 @using EventCenter.Web.Services
 @using EventCenter.Web.Models
@@ -67,16 +69,20 @@
                         @for (int i = 0; i < batchModels.Count; i++)
                         {
                             var index = i; // Capture for lambda
-                            var company = batchModels[index];
+                            var batchEntry = batchModels[index];
 
                             <div class="row mb-3">
-                                <div class="col-md-5">
-                                    <label class="form-label">Firmenname *</label>
-                                    <InputText @bind-Value="company.CompanyName" class="form-control" placeholder="Firmenname" />
-                                </div>
-                                <div class="col-md-5">
-                                    <label class="form-label">Kontakt-E-Mail *</label>
-                                    <InputText @bind-Value="company.ContactEmail" class="form-control" placeholder="email@firma.de" type="email" />
+                                <div class="col-md-10">
+                                    <label class="form-label">Firma auswählen *</label>
+                                    <select class="form-select"
+                                            value="@batchEntry.CompanyId"
+                                            @onchange="e => OnBatchCompanyChange(index, e)">
+                                        <option value="">— Firma auswählen —</option>
+                                        @foreach (var co in allCompanies)
+                                        {
+                                            <option value="@co.Id">@co.Name (@co.ContactEmail)</option>
+                                        }
+                                    </select>
                                 </div>
                                 <div class="col-md-2 d-flex align-items-end">
                                     @if (batchModels.Count > 1)
@@ -141,31 +147,71 @@
                         </div>
                     }
 
-                    <!-- Section 1: Firmendaten -->
+                    <!-- Section 1: Firmendaten (Adressbuch) -->
                     <div class="card mb-3">
                         <div class="card-header">
-                            <h5 class="mb-0">Firmendaten</h5>
+                            <h5 class="mb-0">Firma auswählen</h5>
                         </div>
                         <div class="card-body">
-                            <div class="row">
-                                <div class="col-md-6 mb-3">
-                                    <label class="form-label">Firmenname *</label>
-                                    <InputText @bind-Value="model.CompanyName" class="form-control" />
-                                    <ValidationMessage For="@(() => model.CompanyName)" />
+                            @if (selectedCompany == null)
+                            {
+                                <div class="mb-3">
+                                    <label class="form-label">Firma suchen *</label>
+                                    <input type="text" class="form-control" placeholder="Firmenname oder E-Mail eingeben..."
+                                           value="@companySearchTerm"
+                                           @oninput="OnCompanySearchInput" />
+                                    @if (companySearchResults.Any())
+                                    {
+                                        <div class="list-group mt-1" style="max-height: 250px; overflow-y: auto; position: relative; z-index: 10;">
+                                            @foreach (var co in companySearchResults)
+                                            {
+                                                var captured = co;
+                                                <button type="button" class="list-group-item list-group-item-action"
+                                                        @onclick="() => SelectCompany(captured)">
+                                                    <strong>@captured.Name</strong>
+                                                    <small class="text-muted ms-2">@captured.ContactEmail</small>
+                                                    @if (!string.IsNullOrEmpty(captured.City))
+                                                    {
+                                                        <small class="text-muted ms-2">· @captured.City</small>
+                                                    }
+                                                </button>
+                                            }
+                                        </div>
+                                    }
+                                    else if (companySearchTerm.Length > 0)
+                                    {
+                                        <small class="text-muted">
+                                            Keine Firmen gefunden.
+                                            <a href="/admin/companies/create" target="_blank">Neue Firma anlegen</a>
+                                        </small>
+                                    }
+                                    <ValidationMessage For="@(() => model!.CompanyId)" />
                                 </div>
-                                <div class="col-md-6 mb-3">
-                                    <label class="form-label">Kontakt-E-Mail *</label>
-                                    <InputText @bind-Value="model.ContactEmail" class="form-control" type="email" />
-                                    <ValidationMessage For="@(() => model.ContactEmail)" />
+                            }
+                            else
+                            {
+                                <div class="mb-3">
+                                    <label class="form-label">Ausgewählte Firma</label>
+                                    <div class="border rounded p-3 bg-light">
+                                        <div><strong>@selectedCompany.Name</strong></div>
+                                        <div class="text-muted">
+                                            <small>@selectedCompany.ContactEmail</small>
+                                            @if (!string.IsNullOrEmpty(selectedCompany.ContactPhone))
+                                            {
+                                                <small class="ms-2">· @selectedCompany.ContactPhone</small>
+                                            }
+                                            @if (!string.IsNullOrEmpty(selectedCompany.City))
+                                            {
+                                                <small class="ms-2">· @selectedCompany.City</small>
+                                            }
+                                        </div>
+                                    </div>
+                                    <button type="button" class="btn btn-sm btn-outline-secondary mt-2"
+                                            @onclick="ClearCompanySelection">
+                                        Firma ändern
+                                    </button>
                                 </div>
-                            </div>
-                            <div class="row">
-                                <div class="col-md-6 mb-3">
-                                    <label class="form-label">Telefon (optional)</label>
-                                    <InputText @bind-Value="model.ContactPhone" class="form-control" />
-                                    <ValidationMessage For="@(() => model.ContactPhone)" />
-                                </div>
-                            </div>
+                            }
                         </div>
                     </div>
 
@@ -320,6 +366,14 @@
     private bool showPreview = false;
     private string? errorMessage;
 
+    // Company address book search (single mode)
+    private Company? selectedCompany;
+    private string companySearchTerm = "";
+    private List<Company> companySearchResults = new();
+
+    // Company list for batch dropdown
+    private List<Company> allCompanies = new();
+
     protected override async Task OnInitializedAsync()
     {
         try
@@ -390,10 +444,15 @@
             return;
         }
 
+        // Load company from address book if linked
+        if (existingInvitation.CompanyId.HasValue)
+            selectedCompany = await CompanyService.GetByIdAsync(existingInvitation.CompanyId.Value);
+
         // Map existing invitation to form model
         model = new CompanyInvitationFormModel
         {
             EventId = EventId,
+            CompanyId = existingInvitation.CompanyId,
             CompanyName = existingInvitation.CompanyName,
             ContactEmail = existingInvitation.ContactEmail,
             ContactPhone = existingInvitation.ContactPhone,
@@ -427,7 +486,9 @@
             return;
         }
 
-        // Start with one empty company
+        allCompanies = await CompanyService.GetAllAsync();
+
+        // Start with one empty row
         batchModels = new List<CompanyInvitationFormModel>
         {
             new CompanyInvitationFormModel { EventId = EventId }
@@ -439,6 +500,69 @@
         // Don't auto-populate ManualOverride fields
         // The percentage is shown in the "Rabattpreis" column as visual reference only
         StateHasChanged();
+    }
+
+    // --- Company address book search (single mode) ---
+
+    private async Task OnCompanySearchInput(ChangeEventArgs e)
+    {
+        companySearchTerm = e.Value?.ToString() ?? "";
+        if (companySearchTerm.Length >= 1)
+            companySearchResults = await CompanyService.SearchAsync(companySearchTerm);
+        else
+            companySearchResults = new();
+    }
+
+    private void SelectCompany(Company company)
+    {
+        selectedCompany = company;
+        companySearchTerm = "";
+        companySearchResults = new();
+
+        if (model != null)
+        {
+            model.CompanyId = company.Id;
+            model.CompanyName = company.Name;
+            model.ContactEmail = company.ContactEmail;
+            model.ContactPhone = company.ContactPhone;
+        }
+    }
+
+    private void ClearCompanySelection()
+    {
+        selectedCompany = null;
+        companySearchTerm = "";
+        companySearchResults = new();
+
+        if (model != null)
+        {
+            model.CompanyId = null;
+            model.CompanyName = "";
+            model.ContactEmail = "";
+            model.ContactPhone = null;
+        }
+    }
+
+    // --- Batch company dropdown ---
+
+    private void OnBatchCompanyChange(int index, ChangeEventArgs e)
+    {
+        if (!int.TryParse(e.Value?.ToString(), out var companyId) || companyId == 0)
+        {
+            batchModels[index].CompanyId = null;
+            batchModels[index].CompanyName = "";
+            batchModels[index].ContactEmail = "";
+            batchModels[index].ContactPhone = null;
+            return;
+        }
+
+        var company = allCompanies.FirstOrDefault(c => c.Id == companyId);
+        if (company == null) return;
+
+        batchModels[index].CompanyId = company.Id;
+        batchModels[index].CompanyName = company.Name;
+        batchModels[index].ContactEmail = company.ContactEmail;
+        batchModels[index].ContactPhone = company.ContactPhone;
     }
 
     private void AddCompany()
@@ -557,9 +681,9 @@
 
         try
         {
-            // Apply shared discount and message to all models
+            // Apply shared discount and message to all models (only rows with a company selected)
             var modelsToCreate = batchModels
-                .Where(m => !string.IsNullOrWhiteSpace(m.CompanyName) && !string.IsNullOrWhiteSpace(m.ContactEmail))
+                .Where(m => m.CompanyId.HasValue && m.CompanyId > 0)
                 .Select(m =>
                 {
                     m.PercentageDiscount = sharedPercentageDiscount;
@@ -582,7 +706,7 @@
 
             if (!modelsToCreate.Any())
             {
-                errorMessage = "Bitte geben Sie mindestens eine Firma mit Name und E-Mail ein.";
+                errorMessage = "Bitte wählen Sie mindestens eine Firma aus dem Adressbuch aus.";
                 submitting = false;
                 return;
             }

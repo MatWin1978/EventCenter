@@ -3,6 +3,7 @@ namespace EventCenter.Web.Models;
 public class CompanyInvitationFormModel
 {
     public int EventId { get; set; }
+    public int? CompanyId { get; set; }        // FK to Company address book (required for new invitations)
     public string CompanyName { get; set; } = string.Empty;
     public string ContactEmail { get; set; } = string.Empty;
     public string? ContactPhone { get; set; }

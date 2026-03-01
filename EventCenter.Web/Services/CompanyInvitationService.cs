@@ -102,6 +102,7 @@ public class CompanyInvitationService
                 var invitation = new EventCompany
                 {
                     EventId = formModel.EventId,
+                    CompanyId = formModel.CompanyId,
                     CompanyName = formModel.CompanyName,
                     ContactEmail = formModel.ContactEmail,
                     ContactPhone = formModel.ContactPhone,
@@ -311,6 +312,8 @@ public class CompanyInvitationService
             using var transaction = await _context.Database.BeginTransactionAsync();
             try
             {
+                if (formModel.CompanyId.HasValue)
+                    invitation.CompanyId = formModel.CompanyId;
                 invitation.CompanyName = formModel.CompanyName;
                 invitation.ContactEmail = formModel.ContactEmail;
                 invitation.ContactPhone = formModel.ContactPhone;
