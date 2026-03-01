@@ -3,12 +3,12 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: unknown
-last_updated: "2026-02-27T20:35:47.769Z"
+last_updated: "2026-03-01T15:01:22.494Z"
 progress:
-  total_phases: 8
+  total_phases: 9
   completed_phases: 8
-  total_plans: 28
-  completed_plans: 28
+  total_plans: 30
+  completed_plans: 29
 ---
 
 # Project State
@@ -18,16 +18,16 @@ progress:
 See: .planning/PROJECT.md (updated 2026-02-26)
 
 **Core value:** Makler und eingeladene Firmen können sich reibungslos für Veranstaltungen anmelden, Agendapunkte auswählen und ihre Teilnahme verwalten.
-**Current focus:** Phase 8 - Webinar Support
+**Current focus:** Phase 9 - Navigation & Makler-Registrierungsübersicht
 
 ## Current Position
 
-Phase: 8 of 8 (Webinar Support)
-Plan: 3 of 3 (completed)
-Status: Phase 8 complete - all plans done
-Last activity: 2026-02-27 - Completed plan 08-03 (Portal EventList, EventCard, EventDetail, EventRegistration webinar UI)
+Phase: 9 of 9 (Navigation & Makler-Registrierungsübersicht)
+Plan: 1 of 2 (in progress)
+Status: Phase 9 plan 1 complete - plan 2 pending
+Last activity: 2026-03-01 - Completed plan 09-01 (Home.razor role-based redirect, GetBrokerRegistrationsAsync)
 
-Progress: [██████████] 100% (8/8 phases full, 28/28 plans completed)
+Progress: [█████████▌] 97% (8/9 phases full, 29/30 plans completed)
 
 ## Performance Metrics
 
@@ -62,6 +62,7 @@ Progress: [██████████] 100% (8/8 phases full, 28/28 plans co
 | Phase 07 P03 | 305 | 2 tasks | 1 files |
 | Phase 08 P02 | 485 | 2 tasks | 2 files |
 | Phase 08 P03 | 498 | 2 tasks | 6 files |
+| Phase 09 P01 | 138 | 2 tasks | 2 files |
 
 ## Accumulated Context
 
@@ -166,6 +167,9 @@ Recent decisions affecting current work:
 - [Phase 08-03]: Webinar type tabs are pure client-side filter (no DB call) - all events already loaded in memory via GetPublicEventsAsync
 - [Phase 08-03]: GetStatusBadge webinar guard returns early before capacity/deadline checks - prevents false Ausgebucht for MaxCapacity=0 webinars
 - [Phase 08-03]: iCal export button placed outside webinar/else conditional - visible for all event types including webinars
+- [Phase 09-01]: No [Authorize] on Home.razor: must be accessible to unauthenticated users for auth/login redirect
+- [Phase 09-01]: forceLoad: false for all NavigateTo calls in Home.razor: keeps Blazor circuit alive
+- [Phase 09-01]: Cancelled registrations included in GetBrokerRegistrationsAsync: UI shows Storniert badge per locked decision
 
 ### Roadmap Evolution
 
@@ -187,6 +191,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-02-27
-Stopped at: Completed 08-02-PLAN.md execution (Phase 8 Plan 2 complete)
-Resume file: .planning/phases/08-webinar-support/08-02-SUMMARY.md
+Last session: 2026-03-01
+Stopped at: Completed 09-01-PLAN.md (Phase 9 Plan 1 complete)
+Resume file: .planning/phases/09-navigation-makler-registrierungs-bersicht/09-01-SUMMARY.md
