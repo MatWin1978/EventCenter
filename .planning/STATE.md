@@ -3,12 +3,12 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: unknown
-last_updated: "2026-03-01T15:01:22.494Z"
+last_updated: "2026-03-01T15:06:22.237Z"
 progress:
   total_phases: 9
-  completed_phases: 8
+  completed_phases: 9
   total_plans: 30
-  completed_plans: 29
+  completed_plans: 30
 ---
 
 # Project State
@@ -63,6 +63,7 @@ Progress: [█████████▌] 97% (8/9 phases full, 29/30 plans com
 | Phase 08 P02 | 485 | 2 tasks | 2 files |
 | Phase 08 P03 | 498 | 2 tasks | 6 files |
 | Phase 09 P01 | 138 | 2 tasks | 2 files |
+| Phase 09 P02 | 59 | 1 tasks | 1 files |
 
 ## Accumulated Context
 
@@ -170,6 +171,7 @@ Recent decisions affecting current work:
 - [Phase 09-01]: No [Authorize] on Home.razor: must be accessible to unauthenticated users for auth/login redirect
 - [Phase 09-01]: forceLoad: false for all NavigateTo calls in Home.razor: keeps Blazor circuit alive
 - [Phase 09-01]: Cancelled registrations included in GetBrokerRegistrationsAsync: UI shows Storniert badge per locked decision
+- [Phase 09]: Cards are purely informational on RegistrationList — no action buttons; all actions on EventDetail page
 
 ### Roadmap Evolution
 

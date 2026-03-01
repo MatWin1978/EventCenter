@@ -187,7 +187,7 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6 → 7 → 8
 **Goal:** Role-basierter Redirect nach Login und Makler-Registrierungsübersicht als Kartenliste
 **Requirements**: NAV-01, NAV-02
 **Depends on:** Phase 8
-**Plans:** 1/2 plans executed
+**Plans:** 2/2 plans complete
 
 Plans:
 - [ ] 09-01-PLAN.md — Home.razor smart redirect + GetBrokerRegistrationsAsync service method
