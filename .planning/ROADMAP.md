@@ -181,3 +181,14 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6 → 7 → 8
 | 6. Guest Management | 2/2 | Complete   | 2026-02-27 |
 | 7. Cancellation & Participant Management | 4/4 | Complete   | 2026-02-27 |
 | 8. Webinar Support | 3/3 | Complete    | 2026-02-27 |
+
+### Phase 9: Navigation & Makler-Registrierungsübersicht
+
+**Goal:** Role-basierter Redirect nach Login und Makler-Registrierungsübersicht als Kartenliste
+**Requirements**: NAV-01, NAV-02
+**Depends on:** Phase 8
+**Plans:** 2 plans
+
+Plans:
+- [ ] 09-01-PLAN.md — Home.razor smart redirect + GetBrokerRegistrationsAsync service method
+- [ ] 09-02-PLAN.md — /portal/registrations page with registration cards, empty state, and human-verify checkpoint
