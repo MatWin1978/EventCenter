@@ -85,6 +85,22 @@ Falsche Reihenfolge (Cookie zuerst) → `id_token_hint` fehlt → Keycloak-Sessi
 
 ---
 
+## DateTime und EF Core / SQL Server
+
+SQL Server speichert keine Zeitzoneninformation. EF Core materialisiert `DateTime`-Werte daher immer mit `Kind = DateTimeKind.Unspecified`. Niemals auf `Kind == Utc` prüfen und dann werfen — stattdessen `Unspecified` als UTC behandeln:
+
+```csharp
+// TimeZoneHelper.ConvertUtcToCet — korrekte Behandlung:
+if (utcDateTime.Kind == DateTimeKind.Unspecified)
+    utcDateTime = DateTime.SpecifyKind(utcDateTime, DateTimeKind.Utc);
+else if (utcDateTime.Kind != DateTimeKind.Utc)
+    throw new ArgumentException("DateTime must be UTC", nameof(utcDateTime));
+```
+
+Überall wo DateTime aus dem DB-Kontext kommt und an `ConvertUtcToCet` / `FormatDateTimeCet` übergeben wird, entweder `DateTime.SpecifyKind(dt, DateTimeKind.Utc)` aufrufen oder den obigen Fallback in der Helper-Methode verlassen.
+
+---
+
 ## Testvorgaben
 
 | Rolle | Nutzer | Passwort | Ziel nach Login |
