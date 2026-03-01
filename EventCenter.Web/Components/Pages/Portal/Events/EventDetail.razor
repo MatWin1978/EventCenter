@@ -8,6 +8,7 @@
 @using Microsoft.AspNetCore.Components.Authorization
 @using Blazored.FluentValidation
 @attribute [Authorize(Roles = "Makler")]
+@rendermode InteractiveServer
 @inject EventService EventService
 @inject RegistrationService RegistrationService
 @inject NavigationManager NavigationManager

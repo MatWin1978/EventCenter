@@ -5,6 +5,7 @@
 @using Microsoft.AspNetCore.Authorization
 @using Microsoft.JSInterop
 @attribute [Authorize(Roles = "Admin")]
+@rendermode InteractiveServer
 @inject ParticipantQueryService ParticipantQueryService
 @inject ParticipantExportService ParticipantExportService
 @inject EventService EventService

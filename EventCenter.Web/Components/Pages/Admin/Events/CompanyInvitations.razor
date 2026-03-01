@@ -1,5 +1,6 @@
 @page "/admin/events/{EventId:int}/companies"
 @attribute [Authorize(Policy = "AdminOnly")]
+@rendermode InteractiveServer
 @inject CompanyInvitationService CompanyInvitationService
 @inject EventService EventService
 @inject NavigationManager Navigation

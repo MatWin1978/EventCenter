@@ -2,6 +2,7 @@
 @page "/admin/events/{EventId:int}/companies/create-batch"
 @page "/admin/events/{EventId:int}/companies/edit/{InvitationId:int}"
 @attribute [Authorize(Policy = "AdminOnly")]
+@rendermode InteractiveServer
 @inject CompanyInvitationService CompanyInvitationService
 @inject EventService EventService
 @inject NavigationManager Navigation

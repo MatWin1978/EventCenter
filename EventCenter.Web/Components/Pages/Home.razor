@@ -1,5 +1,7 @@
 @page "/"
+@attribute [Authorize]
 @using Microsoft.AspNetCore.Components.Authorization
+@using Microsoft.AspNetCore.Authorization
 @inject NavigationManager Navigation
 @inject AuthenticationStateProvider AuthStateProvider
 
@@ -19,21 +21,15 @@
         var authState = await AuthStateProvider.GetAuthenticationStateAsync();
         var user = authState.User;
 
-        if (!user.Identity?.IsAuthenticated ?? true)
-        {
-            Navigation.NavigateTo("/auth/login", forceLoad: false);
-            return;
-        }
-
         if (user.IsInRole("Admin"))
         {
-            Navigation.NavigateTo("/admin/events", forceLoad: false);
+            Navigation.NavigateTo("/admin/events", forceLoad: true);
             return;
         }
 
         if (user.IsInRole("Makler"))
         {
-            Navigation.NavigateTo("/portal/events", forceLoad: false);
+            Navigation.NavigateTo("/portal/events", forceLoad: true);
             return;
         }
 

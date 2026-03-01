@@ -107,7 +107,7 @@ builder.Services.AddAuthentication(options =>
                             var roleValue = role.GetString();
                             if (!string.IsNullOrEmpty(roleValue))
                             {
-                                claimsIdentity.AddClaim(new Claim(ClaimTypes.Role, roleValue));
+                                claimsIdentity.AddClaim(new Claim("role", roleValue));
                             }
                         }
                     }
@@ -176,8 +176,17 @@ app.MapGet("/auth/challenge", async (HttpContext context, string returnUrl = "/"
 
 app.MapGet("/auth/signout", async (HttpContext context) =>
 {
+    // Read id_token BEFORE clearing the cookie — OIDC handler needs it for id_token_hint
+    var idToken = await context.GetTokenAsync("id_token");
+
+    var properties = new AuthenticationProperties { RedirectUri = "/" };
+    if (!string.IsNullOrEmpty(idToken))
+    {
+        properties.StoreTokens([new AuthenticationToken { Name = "id_token", Value = idToken }]);
+    }
+
     await context.SignOutAsync(CookieAuthenticationDefaults.AuthenticationScheme);
-    await context.SignOutAsync(OpenIdConnectDefaults.AuthenticationScheme);
+    await context.SignOutAsync(OpenIdConnectDefaults.AuthenticationScheme, properties);
 });
 
 app.MapRazorComponents<App>()

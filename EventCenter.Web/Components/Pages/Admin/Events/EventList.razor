@@ -1,6 +1,7 @@
 @page "/admin/events"
 @attribute [Authorize(Roles = "Admin")]
 @layout MainLayout
+@rendermode InteractiveServer
 @using EventCenter.Web.Domain.Entities
 @using EventCenter.Web.Domain.Enums
 @using EventCenter.Web.Domain.Extensions
@@ -18,9 +19,9 @@
             <h2>Veranstaltungen</h2>
         </div>
         <div class="col text-end">
-            <button class="btn btn-primary" @onclick="@(() => NavigationManager.NavigateTo("/admin/events/create"))">
+            <a href="/admin/events/create" class="btn btn-primary">
                 <span class="bi bi-plus-circle"></span> Neue Veranstaltung
-            </button>
+            </a>
         </div>
     </div>
 

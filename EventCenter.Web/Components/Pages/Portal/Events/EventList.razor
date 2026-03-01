@@ -1,6 +1,7 @@
 @page "/portal/events"
 @attribute [Authorize(Roles = "Makler")]
 @layout MainLayout
+@rendermode InteractiveServer
 @implements IDisposable
 @using EventCenter.Web.Services
 @using EventCenter.Web.Domain.Entities
