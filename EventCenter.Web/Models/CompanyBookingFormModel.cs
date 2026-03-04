@@ -14,4 +14,5 @@ public class ParticipantModel
     public string LastName { get; set; } = string.Empty;
     public string Email { get; set; } = string.Empty;
     public List<int> SelectedAgendaItemIds { get; set; } = new();
+    public bool AgendaRequired { get; set; } = false;
 }

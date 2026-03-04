@@ -16,17 +16,20 @@ public class CompanyInvitationService
     private readonly IEmailSender _emailSender;
     private readonly ILogger<CompanyInvitationService> _logger;
     private readonly IConfiguration _configuration;
+    private readonly IServiceScopeFactory _scopeFactory;
 
     public CompanyInvitationService(
         EventCenterDbContext context,
         IEmailSender emailSender,
         ILogger<CompanyInvitationService> logger,
-        IConfiguration configuration)
+        IConfiguration configuration,
+        IServiceScopeFactory scopeFactory)
     {
         _context = context;
         _emailSender = emailSender;
         _logger = logger;
         _configuration = configuration;
+        _scopeFactory = scopeFactory;
     }
 
     /// <summary>
@@ -148,17 +151,22 @@ public class CompanyInvitationService
 
         if (formModel.SendImmediately && createdInvitation != null)
         {
+            var invitationId = createdInvitation.Id;
+            var invitationEmail = createdInvitation.ContactEmail;
+            var personalMessage = formModel.PersonalMessage ?? string.Empty;
+            var invitationLink = BuildInvitationLink(createdInvitation.InvitationCode!);
+
             _ = Task.Run(async () =>
             {
                 try
                 {
-                    var invitationLink = BuildInvitationLink(createdInvitation.InvitationCode!);
-                    var personalMessage = formModel.PersonalMessage ?? string.Empty;
+                    using var scope = _scopeFactory.CreateScope();
+                    var context = scope.ServiceProvider.GetRequiredService<EventCenterDbContext>();
 
-                    var invitationForEmail = await _context.EventCompanies
+                    var invitationForEmail = await context.EventCompanies
                         .Include(ec => ec.AgendaItemPrices)
                             .ThenInclude(aip => aip.AgendaItem)
-                        .FirstAsync(ec => ec.Id == createdInvitation.Id);
+                        .FirstAsync(ec => ec.Id == invitationId);
 
                     await _emailSender.SendCompanyInvitationAsync(
                         invitationForEmail,
@@ -170,7 +178,7 @@ public class CompanyInvitationService
                 {
                     _logger.LogError(ex,
                         "Failed to send company invitation email to {Email} for event {EventId}",
-                        createdInvitation.ContactEmail,
+                        invitationEmail,
                         formModel.EventId);
                 }
             });

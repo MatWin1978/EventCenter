@@ -4,6 +4,7 @@ using EventCenter.Web.Domain;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
 #nullable disable
@@ -11,9 +12,11 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace EventCenter.Web.Data.Migrations
 {
     [DbContext(typeof(EventCenterDbContext))]
-    partial class EventCenterDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260303101349_AddEventNotices")]
+    partial class AddEventNotices
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -142,9 +145,6 @@ namespace EventCenter.Web.Data.Migrations
                         .IsRequired()
                         .HasMaxLength(200)
                         .HasColumnType("nvarchar(200)");
-
-                    b.Property<decimal?>("WeiterbildungsstundenWebinar")
-                        .HasColumnType("decimal(5,2)");
 
                     b.HasKey("Id");
 

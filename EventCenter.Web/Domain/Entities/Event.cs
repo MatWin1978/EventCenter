@@ -21,6 +21,12 @@ public class Event
 
     public EventType EventType { get; set; } = EventType.InPerson;
     public string? ExternalRegistrationUrl { get; set; }
+    [System.ComponentModel.DataAnnotations.Schema.Column(TypeName = "decimal(5,2)")]
+    public decimal? WeiterbildungsstundenWebinar { get; set; }
+
+    public string? Anmeldehinweis { get; set; }
+    public string? StornohinweisMakler { get; set; }
+    public string? StornohinweisUnternehmen { get; set; }
 
     [System.ComponentModel.DataAnnotations.Timestamp]
     public byte[]? RowVersion { get; set; }

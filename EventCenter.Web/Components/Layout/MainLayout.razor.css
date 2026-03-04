@@ -9,12 +9,14 @@ main {
 }
 
 .sidebar {
-    background-image: linear-gradient(180deg, rgb(5, 39, 103) 0%, #3a0647 70%);
+    background-color: #ffffff;
+    border-right: 1px solid #dde1e6;
+    box-shadow: 2px 0 6px rgba(0, 0, 0, 0.05);
 }
 
 .top-row {
-    background-color: #f7f7f7;
-    border-bottom: 1px solid #d6d5d5;
+    background-color: #ffffff;
+    border-bottom: 1px solid #dde1e6;
     justify-content: flex-end;
     height: 3.5rem;
     display: flex;
@@ -25,6 +27,7 @@ main {
         white-space: nowrap;
         margin-left: 1.5rem;
         text-decoration: none;
+        color: #1a6d94;
     }
 
     .top-row ::deep a:hover, .top-row ::deep .btn-link:hover {
@@ -34,6 +37,8 @@ main {
     .top-row ::deep a:first-child {
         overflow: hidden;
         text-overflow: ellipsis;
+        color: #495057;
+        font-size: 0.9rem;
     }
 
 @media (max-width: 640.98px) {

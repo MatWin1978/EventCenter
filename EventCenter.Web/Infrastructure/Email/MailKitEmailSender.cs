@@ -1,4 +1,5 @@
 using EventCenter.Web.Domain.Entities;
+using EventCenter.Web.Infrastructure.Calendar;
 using EventCenter.Web.Infrastructure.Helpers;
 using EventCenter.Web.Models;
 using MailKit.Net.Smtp;
@@ -12,11 +13,15 @@ public class MailKitEmailSender : IEmailSender
 {
     private readonly SmtpSettings _settings;
     private readonly ILogger<MailKitEmailSender> _logger;
+    private readonly ICalendarExportService _calendarService;
+    private readonly string _baseUrl;
 
-    public MailKitEmailSender(IOptions<SmtpSettings> settings, ILogger<MailKitEmailSender> logger)
+    public MailKitEmailSender(IOptions<SmtpSettings> settings, ILogger<MailKitEmailSender> logger, ICalendarExportService calendarService, IConfiguration configuration)
     {
         _settings = settings.Value;
         _logger = logger;
+        _calendarService = calendarService;
+        _baseUrl = configuration["BaseUrl"]?.TrimEnd('/') ?? "https://localhost";
     }
 
     public async Task SendRegistrationConfirmationAsync(Registration registration)
@@ -68,7 +73,11 @@ public class MailKitEmailSender : IEmailSender
             message.Subject = $"Einladung: {evt.Title}";
 
             var htmlBody = BuildCompanyInvitationHtmlBody(invitation, evt, personalMessage, invitationLink);
-            message.Body = new TextPart("html") { Text = htmlBody };
+
+            var bodyBuilder = new BodyBuilder { HtmlBody = htmlBody };
+            var icsBytes = _calendarService.GenerateEventCalendar(evt);
+            bodyBuilder.Attachments.Add("termin.ics", icsBytes, new ContentType("text", "calendar"));
+            message.Body = bodyBuilder.ToMessageBody();
 
             using var client = new SmtpClient();
             await client.ConnectAsync(_settings.Host, _settings.Port, _settings.UseSsl);
@@ -435,7 +444,7 @@ public class MailKitEmailSender : IEmailSender
         </table>
 
         <div style=""text-align: center; margin: 30px 0;"">
-            <a href=""https://example.com/admin/events/{evt.Id}/companies"" style=""display: inline-block; background-color: #007bff; color: white; padding: 15px 30px; text-decoration: none; border-radius: 5px; font-weight: bold;"">
+            <a href=""{_baseUrl}/admin/events/{evt.Id}/companies"" style=""display: inline-block; background-color: #007bff; color: white; padding: 15px 30px; text-decoration: none; border-radius: 5px; font-weight: bold;"">
                 Zur Firmenverwaltung
             </a>
         </div>
@@ -499,7 +508,7 @@ public class MailKitEmailSender : IEmailSender
         {commentHtml}
 
         <div style=""text-align: center; margin: 30px 0;"">
-            <a href=""https://example.com/admin/events/{evt.Id}/companies"" style=""display: inline-block; background-color: #dc3545; color: white; padding: 15px 30px; text-decoration: none; border-radius: 5px; font-weight: bold;"">
+            <a href=""{_baseUrl}/admin/events/{evt.Id}/companies"" style=""display: inline-block; background-color: #dc3545; color: white; padding: 15px 30px; text-decoration: none; border-radius: 5px; font-weight: bold;"">
                 Zur Firmenverwaltung
             </a>
         </div>
@@ -705,7 +714,7 @@ public class MailKitEmailSender : IEmailSender
         {reasonHtml}
 
         <div style=""text-align: center; margin: 30px 0;"">
-            <a href=""https://example.com/admin/events/{evt.Id}/registrations"" style=""display: inline-block; background-color: #dc3545; color: white; padding: 15px 30px; text-decoration: none; border-radius: 5px; font-weight: bold;"">
+            <a href=""{_baseUrl}/admin/events/{evt.Id}/registrations"" style=""display: inline-block; background-color: #dc3545; color: white; padding: 15px 30px; text-decoration: none; border-radius: 5px; font-weight: bold;"">
                 Zur Anmeldungsverwaltung
             </a>
         </div>

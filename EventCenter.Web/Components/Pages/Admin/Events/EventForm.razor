@@ -77,6 +77,11 @@
                                 <ValidationMessage For="@(() => Model.ExternalRegistrationUrl)" />
                                 <div class="form-text text-muted">Erforderlich zum Veröffentlichen. Kann als Entwurf ohne URL gespeichert werden.</div>
                             </div>
+                            <div class="mb-3">
+                                <label for="weiterbildungsstunden" class="form-label">Weiterbildungsstunden</label>
+                                <InputNumber id="weiterbildungsstunden" class="form-control" style="max-width: 160px;"
+                                    step="0.25" @bind-Value="Model.WeiterbildungsstundenWebinar" />
+                            </div>
                         }
 
                         @if (Model.EventType == EventType.InPerson)
@@ -153,7 +158,32 @@
                     </div>
                 </div>
 
-                <!-- Section 4: Dokumente (Documents) -->
+                <!-- Section 4: Hinweise -->
+                <div class="card mb-4">
+                    <div class="card-header">
+                        <h4 class="mb-0">Hinweise</h4>
+                    </div>
+                    <div class="card-body">
+                        <div class="mb-3">
+                            <label for="anmeldehinweis" class="form-label">Anmeldehinweis</label>
+                            <InputTextArea id="anmeldehinweis" class="form-control" rows="3"
+                                @bind-Value="Model.Anmeldehinweis" />
+                            <div class="form-text text-muted">Wird Maklern und Unternehmen bei der Anmeldung angezeigt.</div>
+                        </div>
+                        <div class="mb-3">
+                            <label for="stornoMakler" class="form-label">Stornohinweis für Makler</label>
+                            <InputTextArea id="stornoMakler" class="form-control" rows="3"
+                                @bind-Value="Model.StornohinweisMakler" />
+                        </div>
+                        <div class="mb-3">
+                            <label for="stornoUnternehmen" class="form-label">Stornohinweis für Unternehmen</label>
+                            <InputTextArea id="stornoUnternehmen" class="form-control" rows="3"
+                                @bind-Value="Model.StornohinweisUnternehmen" />
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Section 5: Dokumente (Documents) -->
                 <div class="card mb-4">
                     <div class="card-header">
                         <h4 class="mb-0">Dokumente</h4>

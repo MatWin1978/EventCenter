@@ -9,7 +9,9 @@ using FluentValidation;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authentication.Cookies;
+using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Authentication.OpenIdConnect;
+using Microsoft.AspNetCore.DataProtection;
 using Microsoft.AspNetCore.Components.Authorization;
 using Microsoft.AspNetCore.Components.Server;
 using Microsoft.AspNetCore.RateLimiting;
@@ -50,6 +52,7 @@ builder.Services.AddScoped<CompanyBookingService>();
 builder.Services.AddScoped<ParticipantQueryService>();
 builder.Services.AddScoped<ParticipantExportService>();
 builder.Services.AddScoped<CompanyService>();
+builder.Services.AddScoped<GuestooEventApiService>();
 
 // Email service
 builder.Services.Configure<SmtpSettings>(builder.Configuration.GetSection("Smtp"));
@@ -57,6 +60,12 @@ builder.Services.AddScoped<IEmailSender, MailKitEmailSender>();
 
 // Calendar export service
 builder.Services.AddSingleton<ICalendarExportService, IcalNetCalendarService>();
+
+// Persist Data Protection keys so auth cookies survive app restarts
+var keysDirectory = new DirectoryInfo(Path.Combine(builder.Environment.ContentRootPath, "..", ".data-protection-keys"));
+keysDirectory.Create();
+builder.Services.AddDataProtection()
+    .PersistKeysToFileSystem(keysDirectory);
 
 // Configure Authentication with Keycloak OIDC
 builder.Services.AddAuthentication(options =>
@@ -115,7 +124,28 @@ builder.Services.AddAuthentication(options =>
                 }
             }
             return Task.CompletedTask;
+        },
+        OnRedirectToIdentityProviderForSignOut = async context =>
+        {
+            // Read id_token from the still-active cookie and set as id_token_hint
+            var result = await context.HttpContext.AuthenticateAsync(CookieAuthenticationDefaults.AuthenticationScheme);
+            var idToken = result?.Properties?.GetTokenValue("id_token");
+            if (!string.IsNullOrEmpty(idToken))
+            {
+                context.ProtocolMessage.IdTokenHint = idToken;
+            }
         }
+    };
+})
+.AddJwtBearer(options =>
+{
+    options.Authority = builder.Configuration["Keycloak:Authority"];
+    options.RequireHttpsMetadata = builder.Configuration.GetValue<bool>("Keycloak:RequireHttpsMetadata");
+    options.TokenValidationParameters = new TokenValidationParameters
+    {
+        NameClaimType = "preferred_username",
+        RoleClaimType = "role",
+        ValidateAudience = false  // Keycloak issues aud="account" by default; issuer+signature validation is sufficient
     };
 });
 
@@ -123,6 +153,11 @@ builder.Services.AddAuthorization(options =>
 {
     options.AddPolicy("AdminOnly", policy => policy.RequireRole("Admin"));
     options.AddPolicy("MaklerOnly", policy => policy.RequireRole("Makler"));
+    options.AddPolicy("GuestooApi", policy =>
+    {
+        policy.AddAuthenticationSchemes(JwtBearerDefaults.AuthenticationScheme);
+        policy.RequireAuthenticatedUser();
+    });
 });
 
 // Rate limiting for anonymous company booking endpoint (AUTH-03 security)
@@ -175,19 +210,35 @@ app.MapGet("/auth/challenge", async (HttpContext context, string returnUrl = "/"
         new AuthenticationProperties { RedirectUri = returnUrl });
 });
 
+app.MapGet("/auth/debug-tokens", async (HttpContext context) =>
+{
+    var result = await context.AuthenticateAsync(CookieAuthenticationDefaults.AuthenticationScheme);
+    if (!result.Succeeded)
+        return Results.Text("NOT authenticated: " + result.Failure?.Message);
+    var tokens = result.Properties?.Items
+        .Where(kv => kv.Key.StartsWith(".Token."))
+        .Select(kv => $"{kv.Key} = {kv.Value?[..Math.Min(40, kv.Value.Length)]}...")
+        .ToList() ?? [];
+    return Results.Text("Tokens:\n" + string.Join("\n", tokens));
+});
+
 app.MapGet("/auth/signout", async (HttpContext context) =>
 {
-    // Read id_token BEFORE clearing the cookie — OIDC handler needs it for id_token_hint
-    var idToken = await context.GetTokenAsync("id_token");
+    // Read id_token before clearing the cookie
+    var authResult = await context.AuthenticateAsync(CookieAuthenticationDefaults.AuthenticationScheme);
+    var idToken = authResult?.Properties?.GetTokenValue("id_token");
 
-    var properties = new AuthenticationProperties { RedirectUri = "/" };
-    if (!string.IsNullOrEmpty(idToken))
-    {
-        properties.StoreTokens([new AuthenticationToken { Name = "id_token", Value = idToken }]);
-    }
-
+    // Clear the local cookie
     await context.SignOutAsync(CookieAuthenticationDefaults.AuthenticationScheme);
-    await context.SignOutAsync(OpenIdConnectDefaults.AuthenticationScheme, properties);
+
+    // Build Keycloak logout URL directly — bypasses OIDC handler issues with id_token_hint
+    var authority = app.Configuration["Keycloak:Authority"]!.TrimEnd('/');
+    var postLogoutUri = Uri.EscapeDataString($"{context.Request.Scheme}://{context.Request.Host}/");
+    var logoutUrl = $"{authority}/protocol/openid-connect/logout?post_logout_redirect_uri={postLogoutUri}";
+    if (!string.IsNullOrEmpty(idToken))
+        logoutUrl += $"&id_token_hint={Uri.EscapeDataString(idToken)}";
+
+    context.Response.Redirect(logoutUrl);
 });
 
 app.MapRazorComponents<App>()
@@ -210,6 +261,7 @@ app.MapGet("/api/events/{eventId:int}/calendar", async (
 app.MapGet("/api/events/{eventId:int}/documents/{*filePath}", async (
     int eventId,
     string filePath,
+    bool view,
     EventService eventService,
     IWebHostEnvironment env) =>
 {
@@ -237,8 +289,20 @@ app.MapGet("/api/events/{eventId:int}/documents/{*filePath}", async (
         _ => "application/octet-stream"
     };
 
-    return Results.File(physicalPath, contentType: contentType, fileDownloadName: sanitizedPath);
+    // view=true → inline (browser öffnet PDF im Tab); default → attachment (Download)
+    return view
+        ? Results.File(physicalPath, contentType: contentType)
+        : Results.File(physicalPath, contentType: contentType, fileDownloadName: sanitizedPath);
 }).RequireAuthorization("MaklerOnly");
+
+// Guestoo-compatible events API — returns published, non-expired events as JSON
+// Auth: Keycloak Bearer token; optional cPAgency header is accepted but not used (no agency filter in EventCenter)
+app.MapGet("/api/cs/guestooevents", async (
+    GuestooEventApiService guestooService) =>
+{
+    var events = await guestooService.GetActiveEventsAsync();
+    return Results.Ok(events);
+}).RequireAuthorization("GuestooApi");
 
 // Apply migrations automatically in Development environment
 if (app.Environment.IsDevelopment())

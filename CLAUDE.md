@@ -58,24 +58,52 @@ claimsIdentity.AddClaim(new Claim(ClaimTypes.Role, roleValue));
 
 ## OIDC Logout mit id_token_hint
 
-Der `id_token` muss **vor** dem Cookie-Clear gelesen werden, da der OIDC-Handler ihn aus dem aktiven Ticket liest:
+### Problem
+
+Keycloak meldet `"Missing parameters: id_token_hint"` beim Logout.
+
+**Ursache:** `GetTokenAsync("id_token")` kann `null` zurückgeben (z. B. wenn der Cookie-Ticket in einem Edge-Case keine Tokens enthält). Dann wird kein Token in die `AuthenticationProperties` geschrieben, und der OIDC-Handler schickt kein `id_token_hint` an Keycloak.
+
+**Funktioniert nicht (zu fragil):**
+```csharp
+var idToken = await context.GetTokenAsync("id_token"); // kann null sein!
+properties.StoreTokens([new AuthenticationToken { Name = "id_token", Value = idToken }]);
+await context.SignOutAsync(CookieAuthenticationDefaults.AuthenticationScheme);
+await context.SignOutAsync(OpenIdConnectDefaults.AuthenticationScheme, properties);
+```
+
+### Lösung: `OnRedirectToIdentityProviderForSignOut` + OIDC zuerst
+
+**1.** Im OIDC-Event das `id_token` explizit aus dem noch-aktiven Cookie lesen und direkt auf die Protocol Message setzen:
+
+```csharp
+// In AddOpenIdConnect → options.Events:
+OnRedirectToIdentityProviderForSignOut = async context =>
+{
+    // Cookie ist hier noch aktiv (OIDC SignOut feuert zuerst)
+    var result = await context.HttpContext.AuthenticateAsync(CookieAuthenticationDefaults.AuthenticationScheme);
+    var idToken = result?.Properties?.GetTokenValue("id_token");
+    if (!string.IsNullOrEmpty(idToken))
+    {
+        context.ProtocolMessage.IdTokenHint = idToken;
+    }
+}
+```
+
+**2.** Im Endpoint OIDC zuerst abmelden (Cookie noch aktiv), dann Cookie löschen:
 
 ```csharp
 app.MapGet("/auth/signout", async (HttpContext context) =>
 {
-    // id_token ZUERST lesen, solange Cookie noch gültig ist
-    var idToken = await context.GetTokenAsync("id_token");
-
+    // OIDC zuerst → Event liest id_token aus aktivem Cookie
     var properties = new AuthenticationProperties { RedirectUri = "/" };
-    if (!string.IsNullOrEmpty(idToken))
-        properties.StoreTokens([new AuthenticationToken { Name = "id_token", Value = idToken }]);
-
-    await context.SignOutAsync(CookieAuthenticationDefaults.AuthenticationScheme);
     await context.SignOutAsync(OpenIdConnectDefaults.AuthenticationScheme, properties);
+    // Cookie danach → Set-Cookie-Header wird zur 302-Response hinzugefügt
+    await context.SignOutAsync(CookieAuthenticationDefaults.AuthenticationScheme);
 });
 ```
 
-Falsche Reihenfolge (Cookie zuerst) → `id_token_hint` fehlt → Keycloak-Session bleibt aktiv.
+**Warum die Reihenfolge funktioniert:** `Response.Redirect()` committed die Response nicht sofort — `Set-Cookie`-Header können noch hinzugefügt werden, bevor die Response tatsächlich gesendet wird.
 
 ---
 

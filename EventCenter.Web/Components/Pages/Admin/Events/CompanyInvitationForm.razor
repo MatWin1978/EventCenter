@@ -33,7 +33,7 @@
             <nav aria-label="breadcrumb">
                 <ol class="breadcrumb">
                     <li class="breadcrumb-item"><a href="/admin/events">Veranstaltungen</a></li>
-                    <li class="breadcrumb-item"><a href="/admin/events/@EventId">@currentEvent?.Title</a></li>
+                    <li class="breadcrumb-item"><a href="/admin/events/edit/@EventId">@currentEvent?.Title</a></li>
                     <li class="breadcrumb-item"><a href="/admin/events/@EventId/companies">Firmeneinladungen</a></li>
                     <li class="breadcrumb-item active">@pageTitle</li>
                 </ol>
@@ -57,7 +57,7 @@
         @if (mode == FormMode.Batch)
         {
             <!-- BATCH MODE FORM -->
-            <EditForm Model="@batchModels" OnValidSubmit="@HandleBatchSubmit">
+            <EditForm Model="@selectedBatchCompanies" OnValidSubmit="@HandleBatchSubmit">
                 <div class="card mb-3">
                     <div class="card-header">
                         <h5 class="mb-0">Sammeleinladung — Standardpreise</h5>
@@ -65,39 +65,56 @@
                     <div class="card-body">
                         <p class="text-muted">Alle eingeladenen Firmen erhalten die Standard-Veranstaltungspreise.</p>
 
-                        <!-- Company Rows -->
-                        @for (int i = 0; i < batchModels.Count; i++)
+                        <!-- Selected companies as chips -->
+                        @if (selectedBatchCompanies.Any())
                         {
-                            var index = i; // Capture for lambda
-                            var batchEntry = batchModels[index];
-
-                            <div class="row mb-3">
-                                <div class="col-md-10">
-                                    <label class="form-label">Firma auswählen *</label>
-                                    <select class="form-select"
-                                            value="@batchEntry.CompanyId"
-                                            @onchange="e => OnBatchCompanyChange(index, e)">
-                                        <option value="">— Firma auswählen —</option>
-                                        @foreach (var co in allCompanies)
-                                        {
-                                            <option value="@co.Id">@co.Name (@co.ContactEmail)</option>
-                                        }
-                                    </select>
-                                </div>
-                                <div class="col-md-2 d-flex align-items-end">
-                                    @if (batchModels.Count > 1)
-                                    {
-                                        <button type="button" class="btn btn-outline-danger" @onclick="() => RemoveCompany(index)">
-                                            <i class="bi bi-x-circle"></i>
+                            <div class="d-flex flex-wrap gap-2 mb-3">
+                                @foreach (var company in selectedBatchCompanies)
+                                {
+                                    var captured = company;
+                                    <span class="badge bg-primary d-flex align-items-center gap-1 py-2 px-3" style="font-size: 0.9rem; font-weight: normal;">
+                                        @captured.Name
+                                        <button type="button" class="btn-close btn-close-white ms-1" style="font-size: 0.6rem;"
+                                                aria-label="Entfernen"
+                                                @onclick="() => RemoveBatchCompany(captured)">
                                         </button>
-                                    }
-                                </div>
+                                    </span>
+                                }
                             </div>
                         }
 
-                        <button type="button" class="btn btn-outline-primary" @onclick="AddCompany">
-                            <i class="bi bi-plus"></i> Weitere Firma hinzufügen
-                        </button>
+                        <!-- Company search -->
+                        <div class="mb-3">
+                            <label class="form-label">Firma suchen *</label>
+                            <input type="text" class="form-control" placeholder="Firmenname oder E-Mail eingeben..."
+                                   value="@batchSearchTerm"
+                                   @oninput="OnBatchSearchInput" />
+                            @if (batchSearchResults.Any())
+                            {
+                                <div class="list-group mt-1" style="max-height: 250px; overflow-y: auto; position: relative; z-index: 10;">
+                                    @foreach (var co in batchSearchResults)
+                                    {
+                                        var captured = co;
+                                        <button type="button" class="list-group-item list-group-item-action"
+                                                @onclick="() => AddBatchCompany(captured)">
+                                            <strong>@captured.Name</strong>
+                                            <small class="text-muted ms-2">@captured.ContactEmail</small>
+                                            @if (!string.IsNullOrEmpty(captured.City))
+                                            {
+                                                <small class="text-muted ms-2">· @captured.City</small>
+                                            }
+                                        </button>
+                                    }
+                                </div>
+                            }
+                            else if (batchSearchTerm.Length > 0)
+                            {
+                                <small class="text-muted">
+                                    Keine Firmen gefunden.
+                                    <a href="/admin/companies/create" target="_blank">Neue Firma anlegen</a>
+                                </small>
+                            }
+                        </div>
 
                         <!-- Shared Percentage Discount -->
                         <div class="mt-4">
@@ -371,8 +388,10 @@
     private string companySearchTerm = "";
     private List<Company> companySearchResults = new();
 
-    // Company list for batch dropdown
-    private List<Company> allCompanies = new();
+    // Company multi-select for batch mode
+    private List<Company> selectedBatchCompanies = new();
+    private string batchSearchTerm = "";
+    private List<Company> batchSearchResults = new();
 
     protected override async Task OnInitializedAsync()
     {
@@ -485,14 +504,6 @@
             errorMessage = "Veranstaltung nicht gefunden.";
             return;
         }
-
-        allCompanies = await CompanyService.GetAllAsync();
-
-        // Start with one empty row
-        batchModels = new List<CompanyInvitationFormModel>
-        {
-            new CompanyInvitationFormModel { EventId = EventId }
-        };
     }
 
     private void ApplyPercentageDiscount()
@@ -543,39 +554,30 @@
         }
     }
 
-    // --- Batch company dropdown ---
+    // --- Batch company multi-select ---
 
-    private void OnBatchCompanyChange(int index, ChangeEventArgs e)
+    private async Task OnBatchSearchInput(ChangeEventArgs e)
     {
-        if (!int.TryParse(e.Value?.ToString(), out var companyId) || companyId == 0)
-        {
-            batchModels[index].CompanyId = null;
-            batchModels[index].CompanyName = "";
-            batchModels[index].ContactEmail = "";
-            batchModels[index].ContactPhone = null;
-            return;
-        }
-
-        var company = allCompanies.FirstOrDefault(c => c.Id == companyId);
-        if (company == null) return;
-
-        batchModels[index].CompanyId = company.Id;
-        batchModels[index].CompanyName = company.Name;
-        batchModels[index].ContactEmail = company.ContactEmail;
-        batchModels[index].ContactPhone = company.ContactPhone;
+        batchSearchTerm = e.Value?.ToString() ?? "";
+        if (batchSearchTerm.Length >= 1)
+            batchSearchResults = (await CompanyService.SearchAsync(batchSearchTerm))
+                .Where(c => !selectedBatchCompanies.Any(s => s.Id == c.Id))
+                .ToList();
+        else
+            batchSearchResults = new();
     }
 
-    private void AddCompany()
+    private void AddBatchCompany(Company company)
     {
-        batchModels.Add(new CompanyInvitationFormModel { EventId = EventId });
+        if (!selectedBatchCompanies.Any(c => c.Id == company.Id))
+            selectedBatchCompanies.Add(company);
+        batchSearchTerm = "";
+        batchSearchResults = new();
     }
 
-    private void RemoveCompany(int index)
+    private void RemoveBatchCompany(Company company)
     {
-        if (batchModels.Count > 1)
-        {
-            batchModels.RemoveAt(index);
-        }
+        selectedBatchCompanies.RemoveAll(c => c.Id == company.Id);
     }
 
     private void TogglePreview()
@@ -681,17 +683,25 @@
 
         try
         {
-            // Apply shared discount and message to all models (only rows with a company selected)
-            var modelsToCreate = batchModels
-                .Where(m => m.CompanyId.HasValue && m.CompanyId > 0)
-                .Select(m =>
+            if (!selectedBatchCompanies.Any())
+            {
+                errorMessage = "Bitte wählen Sie mindestens eine Firma aus.";
+                submitting = false;
+                return;
+            }
+
+            var modelsToCreate = selectedBatchCompanies
+                .Select(company => new CompanyInvitationFormModel
                 {
-                    m.PercentageDiscount = sharedPercentageDiscount;
-                    m.PersonalMessage = sharedPersonalMessage;
-                    m.SendImmediately = true; // Batch always sends immediately
-                    m.EventId = EventId;
-                    // Populate standard pricing
-                    m.AgendaItemPrices = currentEvent!.AgendaItems
+                    EventId = EventId,
+                    CompanyId = company.Id,
+                    CompanyName = company.Name,
+                    ContactEmail = company.ContactEmail,
+                    ContactPhone = company.ContactPhone,
+                    PercentageDiscount = sharedPercentageDiscount,
+                    PersonalMessage = sharedPersonalMessage,
+                    SendImmediately = true,
+                    AgendaItemPrices = currentEvent!.AgendaItems
                         .Select(ai => new CompanyAgendaItemPriceModel
                         {
                             AgendaItemId = ai.Id,
@@ -699,17 +709,9 @@
                             BasePrice = ai.CostForMakler,
                             ManualOverride = null
                         })
-                        .ToList();
-                    return m;
+                        .ToList()
                 })
                 .ToList();
-
-            if (!modelsToCreate.Any())
-            {
-                errorMessage = "Bitte wählen Sie mindestens eine Firma aus dem Adressbuch aus.";
-                submitting = false;
-                return;
-            }
 
             (int succeeded, int failed, List<string> errors) = await CompanyInvitationService.CreateBatchInvitationsAsync(EventId, modelsToCreate);
 

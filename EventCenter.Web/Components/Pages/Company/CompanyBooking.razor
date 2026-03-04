@@ -10,6 +10,7 @@
 @using System.Globalization
 @using Microsoft.AspNetCore.Authorization
 @attribute [AllowAnonymous]
+@rendermode InteractiveServer
 @inject CompanyBookingService BookingService
 @inject NavigationManager NavigationManager
 
@@ -64,6 +65,21 @@ else if (viewState == "form")
                         </p>
                     </div>
                 </div>
+
+                @if (!string.IsNullOrWhiteSpace(eventCompany.Event.Anmeldehinweis))
+                {
+                    <div class="alert alert-info mb-4">
+                        <h6 class="alert-heading"><i class="bi bi-info-circle"></i> Anmeldehinweis</h6>
+                        <p class="mb-0" style="white-space: pre-wrap;">@eventCompany.Event.Anmeldehinweis</p>
+                    </div>
+                }
+                @if (!string.IsNullOrWhiteSpace(eventCompany.Event.StornohinweisUnternehmen))
+                {
+                    <div class="alert alert-warning mb-4">
+                        <h6 class="alert-heading"><i class="bi bi-exclamation-triangle"></i> Stornohinweis</h6>
+                        <p class="mb-0" style="white-space: pre-wrap;">@eventCompany.Event.StornohinweisUnternehmen</p>
+                    </div>
+                }
 
                 @if (!string.IsNullOrWhiteSpace(submitErrorMessage))
                 {
@@ -282,7 +298,20 @@ else if (viewState == "submitted")
                 <p class="lead">Sie erhalten in Kürze eine Bestätigung per E-Mail.</p>
                 <hr />
                 <p class="mb-1"><strong>Firma:</strong> @eventCompany.CompanyName</p>
-                <p class="mb-0"><strong>Veranstaltung:</strong> @eventCompany.Event.Title</p>
+                <p class="mb-3"><strong>Veranstaltung:</strong> @eventCompany.Event.Title</p>
+
+                <p class="text-muted mb-2">Termin in Ihrem Kalender speichern:</p>
+                <div class="d-flex justify-content-center gap-2 flex-wrap">
+                    <a href="@BuildGoogleCalendarUrl(eventCompany.Event)" target="_blank" class="btn btn-outline-primary">
+                        <i class="bi bi-google"></i> Google Calendar
+                    </a>
+                    <a href="@BuildOutlookCalendarUrl(eventCompany.Event)" target="_blank" class="btn btn-outline-primary">
+                        <i class="bi bi-microsoft"></i> Outlook.com
+                    </a>
+                    <a href="@BuildWebcalUrl(eventCompany.Event.Id)" class="btn btn-outline-secondary">
+                        <i class="bi bi-calendar-plus"></i> Apple / iCal
+                    </a>
+                </div>
             </div>
         </div>
     </div>
@@ -310,6 +339,21 @@ else if (viewState == "booked")
             </div>
         </div>
 
+        @if (!string.IsNullOrWhiteSpace(eventCompany.Event.Anmeldehinweis))
+        {
+            <div class="alert alert-info mb-4">
+                <h6 class="alert-heading"><i class="bi bi-info-circle"></i> Anmeldehinweis</h6>
+                <p class="mb-0" style="white-space: pre-wrap;">@eventCompany.Event.Anmeldehinweis</p>
+            </div>
+        }
+        @if (!string.IsNullOrWhiteSpace(eventCompany.Event.StornohinweisUnternehmen))
+        {
+            <div class="alert alert-warning mb-4">
+                <h6 class="alert-heading"><i class="bi bi-exclamation-triangle"></i> Stornohinweis</h6>
+                <p class="mb-0" style="white-space: pre-wrap;">@eventCompany.Event.StornohinweisUnternehmen</p>
+            </div>
+        }
+
         <!-- Booking Information -->
         <div class="card mb-4">
             <div class="card-header bg-primary text-white">
@@ -332,6 +376,7 @@ else if (viewState == "booked")
                                 <th>Name</th>
                                 <th>E-Mail</th>
                                 <th>Agendapunkte</th>
+                                <th></th>
                             </tr>
                         </thead>
                         <tbody>
@@ -339,14 +384,21 @@ else if (viewState == "booked")
                             {
                                 @foreach (var registration in eventCompany.Registrations.Where(r => !r.IsCancelled))
                                 {
+                                    var reg = registration;
                                     <tr>
-                                        <td>@registration.FirstName @registration.LastName</td>
-                                        <td>@registration.Email</td>
+                                        <td>@reg.FirstName @reg.LastName</td>
+                                        <td>@reg.Email</td>
                                         <td>
-                                            @if (registration.RegistrationAgendaItems != null && registration.RegistrationAgendaItems.Any())
+                                            @if (reg.RegistrationAgendaItems != null && reg.RegistrationAgendaItems.Any())
                                             {
-                                                @string.Join(", ", registration.RegistrationAgendaItems.Select(rai => rai.AgendaItem.Title))
+                                                @string.Join(", ", reg.RegistrationAgendaItems.Select(rai => rai.AgendaItem.Title))
                                             }
+                                        </td>
+                                        <td>
+                                            <button type="button" class="btn btn-outline-danger btn-sm"
+                                                    @onclick="@(() => OpenCancelParticipantModal(reg.Id, reg.FirstName + " " + reg.LastName))">
+                                                Stornieren
+                                            </button>
                                         </td>
                                     </tr>
                                 }
@@ -362,6 +414,22 @@ else if (viewState == "booked")
             <button type="button" class="btn btn-outline-primary btn-lg" @onclick="@(() => showManagementModal = true)">
                 Buchung bearbeiten
             </button>
+        </div>
+
+        <!-- Calendar Buttons -->
+        <div class="text-center mt-4">
+            <p class="text-muted mb-2">Termin in Ihrem Kalender speichern:</p>
+            <div class="d-flex justify-content-center gap-2 flex-wrap">
+                <a href="@BuildGoogleCalendarUrl(eventCompany.Event)" target="_blank" class="btn btn-outline-primary">
+                    <i class="bi bi-google"></i> Google Calendar
+                </a>
+                <a href="@BuildOutlookCalendarUrl(eventCompany.Event)" target="_blank" class="btn btn-outline-primary">
+                    <i class="bi bi-microsoft"></i> Outlook.com
+                </a>
+                <a href="@BuildWebcalUrl(eventCompany.Event.Id)" class="btn btn-outline-secondary">
+                    <i class="bi bi-calendar-plus"></i> Apple / iCal
+                </a>
+            </div>
         </div>
     </div>
 }
@@ -487,6 +555,43 @@ else if (viewState == "cancelled")
     </div>
 }
 
+<!-- Cancel Single Participant Modal -->
+@if (showCancelParticipantModal)
+{
+    <div class="modal fade show d-block" tabindex="-1" style="background-color: rgba(0,0,0,0.5);">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Teilnehmer stornieren</h5>
+                    <button type="button" class="btn-close" @onclick="CloseCancelParticipantModal"></button>
+                </div>
+                <div class="modal-body">
+                    <p>Möchten Sie die Anmeldung von <strong>@cancelParticipantName</strong> wirklich stornieren?</p>
+                    <div class="mb-3">
+                        <label class="form-label">Kommentar (optional)</label>
+                        <textarea class="form-control" rows="2" @bind="cancelParticipantComment"
+                                  placeholder="Optional: Grund angeben..."></textarea>
+                    </div>
+                    @if (!string.IsNullOrEmpty(cancelParticipantError))
+                    {
+                        <div class="alert alert-danger">@cancelParticipantError</div>
+                    }
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" @onclick="CloseCancelParticipantModal" disabled="@isCancellingParticipant">Abbrechen</button>
+                    <button type="button" class="btn btn-danger" @onclick="HandleCancelParticipant" disabled="@isCancellingParticipant">
+                        @if (isCancellingParticipant)
+                        {
+                            <span class="spinner-border spinner-border-sm me-1"></span>
+                        }
+                        Stornieren bestätigen
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+}
+
 <style>
     .cost-summary-sticky {
         position: sticky;
@@ -520,6 +625,13 @@ else if (viewState == "cancelled")
     private bool isProcessing = false;
     private string? managementComment;
     private string? managementError;
+
+    private bool showCancelParticipantModal = false;
+    private int cancelParticipantRegistrationId;
+    private string cancelParticipantName = string.Empty;
+    private string? cancelParticipantComment;
+    private string? cancelParticipantError;
+    private bool isCancellingParticipant = false;
 
     private decimal TotalCost
     {
@@ -591,10 +703,11 @@ else if (viewState == "cancelled")
         availableOptions = eventCompany.Event.EventOptions?.ToList() ?? new();
 
         // Initialize model
+        var agendaRequired = availableAgendaItems.Any();
         model = new CompanyBookingFormModel
         {
             EventCompanyId = eventCompany.Id,
-            Participants = new List<ParticipantModel> { new ParticipantModel() }
+            Participants = new List<ParticipantModel> { new ParticipantModel { AgendaRequired = agendaRequired } }
         };
     }
 
@@ -608,7 +721,7 @@ else if (viewState == "cancelled")
 
     private void AddParticipant()
     {
-        model.Participants.Add(new ParticipantModel());
+        model.Participants.Add(new ParticipantModel { AgendaRequired = availableAgendaItems.Any() });
         StateHasChanged();
     }
 
@@ -762,6 +875,55 @@ else if (viewState == "cancelled")
         }
     }
 
+    private void OpenCancelParticipantModal(int registrationId, string name)
+    {
+        cancelParticipantRegistrationId = registrationId;
+        cancelParticipantName = name;
+        cancelParticipantComment = null;
+        cancelParticipantError = null;
+        showCancelParticipantModal = true;
+    }
+
+    private void CloseCancelParticipantModal()
+    {
+        showCancelParticipantModal = false;
+    }
+
+    private async Task HandleCancelParticipant()
+    {
+        if (eventCompany == null) return;
+
+        isCancellingParticipant = true;
+        cancelParticipantError = null;
+
+        try
+        {
+            var (success, error) = await BookingService.CancelSingleRegistrationAsync(
+                cancelParticipantRegistrationId, eventCompany.Id, cancelParticipantComment);
+
+            if (success)
+            {
+                showCancelParticipantModal = false;
+                await LoadBookingStatus();
+                // If no active registrations remain, the booking was auto-cancelled
+                if (eventCompany?.Registrations?.All(r => r.IsCancelled) == true)
+                    viewState = "cancelled";
+            }
+            else
+            {
+                cancelParticipantError = error ?? "Stornierung fehlgeschlagen.";
+            }
+        }
+        catch
+        {
+            cancelParticipantError = "Ein unerwarteter Fehler ist aufgetreten.";
+        }
+        finally
+        {
+            isCancellingParticipant = false;
+        }
+    }
+
     private void HandleReBooking()
     {
         // Reset form for re-booking
@@ -773,5 +935,35 @@ else if (viewState == "cancelled")
 
         viewState = "form";
         StateHasChanged();
+    }
+
+    private string BuildGoogleCalendarUrl(Event evt)
+    {
+        var start = DateTime.SpecifyKind(evt.StartDateUtc, DateTimeKind.Utc).ToString("yyyyMMddTHHmmssZ");
+        var end = DateTime.SpecifyKind(evt.EndDateUtc, DateTimeKind.Utc).ToString("yyyyMMddTHHmmssZ");
+        return "https://calendar.google.com/calendar/render?action=TEMPLATE" +
+               $"&text={Uri.EscapeDataString(evt.Title)}" +
+               $"&dates={start}/{end}" +
+               $"&location={Uri.EscapeDataString(evt.Location ?? "")}" +
+               $"&details={Uri.EscapeDataString(evt.Description ?? "")}";
+    }
+
+    private string BuildOutlookCalendarUrl(Event evt)
+    {
+        var start = DateTime.SpecifyKind(evt.StartDateUtc, DateTimeKind.Utc).ToString("yyyy-MM-ddTHH:mm:ss");
+        var end = DateTime.SpecifyKind(evt.EndDateUtc, DateTimeKind.Utc).ToString("yyyy-MM-ddTHH:mm:ss");
+        return "https://outlook.live.com/calendar/0/action/compose" +
+               $"?subject={Uri.EscapeDataString(evt.Title)}" +
+               $"&startdt={start}" +
+               $"&enddt={end}" +
+               $"&location={Uri.EscapeDataString(evt.Location ?? "")}" +
+               $"&body={Uri.EscapeDataString(evt.Description ?? "")}";
+    }
+
+    private string BuildWebcalUrl(int eventId)
+    {
+        var baseUri = NavigationManager.BaseUri.TrimEnd('/');
+        var webcalBase = baseUri.Replace("https://", "webcal://").Replace("http://", "webcal://");
+        return $"{webcalBase}/api/events/{eventId}/calendar";
     }
 }

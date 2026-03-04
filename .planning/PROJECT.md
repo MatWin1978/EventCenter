@@ -82,4 +82,4 @@ Das System basiert auf einem klar definierten Domainmodell (siehe `EventCenter/d
 | Standalone statt Umbraco | Klare Trennung, keine Legacy-Abhängigkeiten, einfacher wartbar | — Pending |
 
 ---
-*Last updated: 2026-02-26 after initialization*
+*Last updated: 2026-03-03 — Hinweis-Felder (Anmeldehinweis, Stornohinweis Makler/Unternehmen) zu Event-Entity und allen betroffenen Seiten hinzugefügt (EVNT-06)*

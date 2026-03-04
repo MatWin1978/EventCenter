@@ -1,0 +1,24 @@
+# Build output
+bin/
+obj/
+
+# Data protection keys (runtime, lokal)
+.data-protection-keys/
+
+# User uploads (Laufzeit-Daten)
+EventCenter.Web/wwwroot/uploads/
+
+# Screenshots / temporäre Dateien
+*.png
+*.jpg
+*.jpeg
+
+# Visual Studio
+.vs/
+*.user
+
+# Rider
+.idea/
+
+# dotnet publish
+publish/

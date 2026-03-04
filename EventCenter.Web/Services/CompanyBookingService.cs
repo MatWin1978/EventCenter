@@ -253,6 +253,45 @@ public class CompanyBookingService
     }
 
     /// <summary>
+    /// Cancels a single registration. If all registrations are then cancelled, the booking is marked as cancelled too.
+    /// </summary>
+    public async Task<(bool Success, string? ErrorMessage)> CancelSingleRegistrationAsync(int registrationId, int eventCompanyId, string? cancellationComment)
+    {
+        var invitation = await _context.EventCompanies
+            .Include(ec => ec.Event)
+            .Include(ec => ec.Registrations)
+            .FirstOrDefaultAsync(ec => ec.Id == eventCompanyId);
+
+        if (invitation == null)
+            return (false, "Einladung nicht gefunden.");
+
+        if (invitation.Status != InvitationStatus.Booked)
+            return (false, "Keine aktive Buchung vorhanden.");
+
+        var registration = invitation.Registrations.FirstOrDefault(r => r.Id == registrationId);
+        if (registration == null)
+            return (false, "Teilnehmer nicht gefunden.");
+
+        if (registration.IsCancelled)
+            return (false, "Teilnehmer ist bereits storniert.");
+
+        registration.IsCancelled = true;
+        registration.CancellationDateUtc = DateTime.UtcNow;
+        registration.CancellationReason = cancellationComment;
+
+        // If all registrations are now cancelled, mark the entire booking as cancelled
+        if (invitation.Registrations.All(r => r.IsCancelled))
+        {
+            invitation.Status = InvitationStatus.Cancelled;
+            invitation.CancellationComment = cancellationComment;
+            invitation.IsNonParticipation = false;
+        }
+
+        await _context.SaveChangesAsync();
+        return (true, null);
+    }
+
+    /// <summary>
     /// Reports non-participation for a company booking.
     /// </summary>
     public async Task<(bool Success, string? ErrorMessage)> ReportNonParticipationAsync(int eventCompanyId, string? comment)

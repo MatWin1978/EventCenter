@@ -38,6 +38,7 @@ public class ParticipantValidator : AbstractValidator<ParticipantModel>
             .MaximumLength(200).WithMessage("E-Mail darf maximal 200 Zeichen lang sein");
 
         RuleFor(x => x.SelectedAgendaItemIds)
-            .NotEmpty().WithMessage("Mindestens ein Agendapunkt muss ausgewählt werden");
+            .NotEmpty().WithMessage("Mindestens ein Agendapunkt muss ausgewählt werden")
+            .When(x => x.AgendaRequired);
     }
 }
