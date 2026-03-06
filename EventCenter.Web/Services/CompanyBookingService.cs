@@ -111,6 +111,29 @@ public class CompanyBookingService
 
         try
         {
+            // Validate submitted IDs belong to this event (prevent cross-event ID injection)
+            var validAgendaItemIds = await _context.AgendaItems
+                .Where(a => a.EventId == invitation.EventId)
+                .Select(a => a.Id)
+                .ToHashSetAsync();
+
+            var validOptionIds = await _context.EventOptions
+                .Where(o => o.EventId == invitation.EventId)
+                .Select(o => o.Id)
+                .ToHashSetAsync();
+
+            var allAgendaIdsValid = formModel.Participants
+                .SelectMany(p => p.SelectedAgendaItemIds)
+                .All(id => validAgendaItemIds.Contains(id));
+
+            var allOptionIdsValid = formModel.SelectedExtraOptionIds
+                .All(id => validOptionIds.Contains(id));
+
+            if (!allAgendaIdsValid || !allOptionIdsValid)
+            {
+                return (false, "Ungültige Auswahl.");
+            }
+
             // Update invitation status
             invitation.Status = InvitationStatus.Booked;
             invitation.BookingDateUtc = DateTime.UtcNow;

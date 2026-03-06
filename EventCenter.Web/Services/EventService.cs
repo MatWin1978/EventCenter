@@ -315,16 +315,17 @@ public class EventService
     /// </summary>
     public Task DeleteDocumentAsync(string relativePath)
     {
-        // Validate path starts with /uploads/events/
-        if (!relativePath.StartsWith("/uploads/events/"))
+        // Resolve canonical paths to prevent path traversal (e.g. /uploads/events/../../etc/passwd)
+        var uploadRoot = Path.GetFullPath(Path.Combine(_environment.WebRootPath, "uploads", "events"));
+        var absolutePath = Path.GetFullPath(Path.Combine(
+            _environment.WebRootPath,
+            relativePath.TrimStart('/').Replace('/', Path.DirectorySeparatorChar)
+        ));
+
+        if (!absolutePath.StartsWith(uploadRoot + Path.DirectorySeparatorChar))
         {
             throw new InvalidOperationException("Invalid file path.");
         }
-
-        var absolutePath = Path.Combine(
-            _environment.WebRootPath,
-            relativePath.TrimStart('/').Replace('/', Path.DirectorySeparatorChar)
-        );
 
         if (File.Exists(absolutePath))
         {

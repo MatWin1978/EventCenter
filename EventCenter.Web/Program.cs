@@ -206,6 +206,10 @@ app.UseAuthorization();
 // Authentication endpoints
 app.MapGet("/auth/challenge", async (HttpContext context, string returnUrl = "/") =>
 {
+    // Prevent open redirect: only allow local paths (must be relative and start with /)
+    if (!Uri.TryCreate(returnUrl, UriKind.Relative, out _) || !returnUrl.StartsWith('/'))
+        returnUrl = "/";
+
     await context.ChallengeAsync(OpenIdConnectDefaults.AuthenticationScheme,
         new AuthenticationProperties { RedirectUri = returnUrl });
 });
