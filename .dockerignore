@@ -1,0 +1,11 @@
+**/.git
+**/.vs
+**/.vscode
+**/bin
+**/obj
+EventCenter.Tests
+.data-protection-keys
+keycloak
+docs
+README
+*.png

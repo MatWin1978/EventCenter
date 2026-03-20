@@ -1,0 +1,102 @@
+services:
+
+  # ── Blazor Web App ────────────────────────────────────────────────────────────
+  webapp:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: eventcenter-app
+    # "localhost" im Container soll den Docker-Host (und damit Keycloak via
+    # Port-Mapping) erreichen, damit die Keycloak Authority-URL identisch mit
+    # der Browser-URL bleibt — sonst würde der JWT-Issuer nicht übereinstimmen.
+    extra_hosts:
+      - "localhost:host-gateway"
+    environment:
+      ASPNETCORE_ENVIRONMENT: Development   # aktiviert Auto-Migrations + detaillierte Fehler
+      ASPNETCORE_URLS: http://+:5270
+      # Datenbank
+      ConnectionStrings__DefaultConnection: >-
+        Server=sqlserver,1433;Database=EventCenterDb;User Id=sa;
+        Password=EventCenter@2024;TrustServerCertificate=True;
+        MultipleActiveResultSets=true
+      # Keycloak — Authority bleibt localhost:8080 (Browser-URL), weil extra_hosts
+      # dafür sorgt, dass localhost im Container den Host erreicht
+      Keycloak__Authority: "http://localhost:8080/realms/eventcenter"
+      Keycloak__ClientId: "eventcenter-app"
+      Keycloak__ClientSecret: "eventcenter-dev-secret"
+      Keycloak__RequireHttpsMetadata: "false"
+      # SMTP → Mailpit
+      Smtp__Host: "mailpit"
+      Smtp__Port: "1025"
+      Smtp__UseSsl: "false"
+      Smtp__SenderName: "Veranstaltungscenter"
+      Smtp__SenderEmail: "noreply@eventcenter.local"
+      # Öffentliche Basis-URL der App
+      BaseUrl: "http://localhost:5270"
+      Guestoo__BaseUrl: "http://localhost:5270"
+    ports:
+      - "5270:5270"
+    volumes:
+      # Data Protection Keys überleben Container-Neustarts (sonst Logout bei Neustart)
+      - data-protection-keys:/.data-protection-keys
+      # Hochgeladene Dateien persistieren
+      - uploads:/app/wwwroot/uploads
+    depends_on:
+      sqlserver:
+        condition: service_healthy   # warte auf gesunden SQL Server
+      keycloak:
+        condition: service_started   # Keycloak braucht ~30 s zum Hochfahren
+    restart: unless-stopped
+
+  # ── SQL Server ────────────────────────────────────────────────────────────────
+  sqlserver:
+    image: mcr.microsoft.com/mssql/server:2022-latest
+    container_name: eventcenter-sqlserver
+    environment:
+      ACCEPT_EULA: "Y"
+      MSSQL_SA_PASSWORD: "EventCenter@2024"
+    ports:
+      - "1433:1433"
+    volumes:
+      - sqlserver-data:/var/opt/mssql
+    healthcheck:
+      test:
+        - "CMD-SHELL"
+        - >-
+          /opt/mssql-tools18/bin/sqlcmd -S localhost -U sa
+          -P 'EventCenter@2024' -Q 'SELECT 1' -No || exit 1
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 30s
+    restart: unless-stopped
+
+  # ── Keycloak ──────────────────────────────────────────────────────────────────
+  keycloak:
+    image: quay.io/keycloak/keycloak:26.0
+    container_name: eventcenter-keycloak
+    environment:
+      KEYCLOAK_ADMIN: admin
+      KEYCLOAK_ADMIN_PASSWORD: admin
+    volumes:
+      - ./keycloak/realm-export.json:/opt/keycloak/data/import/realm-export.json:ro
+      - keycloak-data:/opt/keycloak/data
+    command: start-dev --import-realm
+    ports:
+      - "8080:8080"
+    restart: unless-stopped
+
+  # ── Mailpit (SMTP-Testserver) ─────────────────────────────────────────────────
+  mailpit:
+    image: axllent/mailpit:latest
+    container_name: eventcenter-mailpit
+    ports:
+      - "1025:1025"   # SMTP
+      - "8025:8025"   # Web-UI
+    restart: unless-stopped
+
+volumes:
+  sqlserver-data:
+  keycloak-data:
+  data-protection-keys:
+  uploads:
