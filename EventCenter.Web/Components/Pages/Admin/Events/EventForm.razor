@@ -558,7 +558,7 @@
 
             // Navigate back to list after a short delay
             await Task.Delay(1500);
-            NavigationManager.NavigateTo("/admin/events");
+            NavigationManager.NavigateTo("/admin/events", forceLoad: true);
         }
         catch (Exception ex)
         {

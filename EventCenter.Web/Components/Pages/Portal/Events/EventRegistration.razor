@@ -291,7 +291,7 @@ else
             // Validate event is available for registration
             if (evt == null || !evt.IsPublished)
             {
-                NavigationManager.NavigateTo("/portal/events");
+                NavigationManager.NavigateTo("/portal/events", forceLoad: true);
                 return;
             }
 

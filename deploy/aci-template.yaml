@@ -1,0 +1,154 @@
+name: eventcenter
+apiVersion: '2021-10-01'
+location: ${LOCATION}
+properties:
+
+  # ── Blazor Web App ─────────────────────────────────────────────────────────
+  containers:
+  - name: webapp
+    properties:
+      image: ghcr.io/matwin1978/eventcenter:latest
+      resources:
+        requests:
+          cpu: 1
+          memoryInGb: 1.5
+      ports:
+      - port: 5270
+        protocol: TCP
+      environmentVariables:
+      - name: ASPNETCORE_ENVIRONMENT
+        value: Production
+      - name: ASPNETCORE_URLS
+        value: http://+:5270
+      - name: ConnectionStrings__DefaultConnection
+        secureValue: "Server=localhost,1433;Database=EventCenterDb;User Id=sa;Password=${MSSQL_SA_PASSWORD};TrustServerCertificate=True;MultipleActiveResultSets=true"
+      # Keycloak authority: öffentliche URL — gilt für Browser UND App-Container
+      # (ACI-Container können die eigene öffentliche IP erreichen)
+      - name: Keycloak__Authority
+        value: http://${DNS_LABEL}.${LOCATION}.azurecontainer.io:8080/realms/eventcenter
+      - name: Keycloak__ClientId
+        value: eventcenter-app
+      - name: Keycloak__ClientSecret
+        secureValue: "${KC_CLIENT_SECRET}"
+      - name: Keycloak__RequireHttpsMetadata
+        value: "false"
+      - name: Smtp__Host
+        value: localhost
+      - name: Smtp__Port
+        value: "1025"
+      - name: Smtp__UseSsl
+        value: "false"
+      - name: Smtp__SenderName
+        value: Veranstaltungscenter
+      - name: Smtp__SenderEmail
+        value: noreply@eventcenter.local
+      - name: BaseUrl
+        value: http://${DNS_LABEL}.${LOCATION}.azurecontainer.io:5270
+      - name: Guestoo__BaseUrl
+        value: http://${DNS_LABEL}.${LOCATION}.azurecontainer.io:5270
+      volumeMounts:
+      - name: data-protection-keys
+        mountPath: /.data-protection-keys
+      - name: uploads
+        mountPath: /app/wwwroot/uploads
+
+  # ── SQL Server ─────────────────────────────────────────────────────────────
+  - name: sqlserver
+    properties:
+      image: mcr.microsoft.com/mssql/server:2022-latest
+      resources:
+        requests:
+          cpu: 2
+          memoryInGb: 4
+      ports:
+      - port: 1433
+        protocol: TCP
+      environmentVariables:
+      - name: ACCEPT_EULA
+        value: "Y"
+      - name: MSSQL_SA_PASSWORD
+        secureValue: "${MSSQL_SA_PASSWORD}"
+      volumeMounts:
+      - name: sqlserver-data
+        mountPath: /var/opt/mssql
+
+  # ── Keycloak ───────────────────────────────────────────────────────────────
+  - name: keycloak
+    properties:
+      image: quay.io/keycloak/keycloak:26.0
+      resources:
+        requests:
+          cpu: 1
+          memoryInGb: 1.0
+      ports:
+      - port: 8080
+        protocol: TCP
+      environmentVariables:
+      - name: KEYCLOAK_ADMIN
+        value: admin
+      - name: KEYCLOAK_ADMIN_PASSWORD
+        secureValue: "${KC_ADMIN_PASSWORD}"
+      command:
+      - /opt/keycloak/bin/kc.sh
+      - start-dev
+      - --import-realm
+      volumeMounts:
+      - name: keycloak-data
+        mountPath: /opt/keycloak/data
+      - name: keycloak-import
+        mountPath: /opt/keycloak/data/import
+
+  # ── Mailpit ────────────────────────────────────────────────────────────────
+  - name: mailpit
+    properties:
+      image: axllent/mailpit:latest
+      resources:
+        requests:
+          cpu: 0.25
+          memoryInGb: 0.25
+      ports:
+      - port: 1025
+        protocol: TCP
+      - port: 8025
+        protocol: TCP
+
+  osType: Linux
+  restartPolicy: Always
+
+  ipAddress:
+    type: Public
+    dnsNameLabel: ${DNS_LABEL}
+    ports:
+    - port: 5270
+      protocol: TCP
+    - port: 8080
+      protocol: TCP
+    - port: 8025
+      protocol: TCP
+
+  volumes:
+  - name: sqlserver-data
+    azureFile:
+      shareName: sqlserver-data
+      storageAccountName: ${STORAGE_ACCOUNT}
+      storageAccountKey: ${STORAGE_KEY}
+  - name: keycloak-data
+    azureFile:
+      shareName: keycloak-data
+      storageAccountName: ${STORAGE_ACCOUNT}
+      storageAccountKey: ${STORAGE_KEY}
+  - name: keycloak-import
+    azureFile:
+      shareName: keycloak-import
+      storageAccountName: ${STORAGE_ACCOUNT}
+      storageAccountKey: ${STORAGE_KEY}
+  - name: data-protection-keys
+    azureFile:
+      shareName: data-protection-keys
+      storageAccountName: ${STORAGE_ACCOUNT}
+      storageAccountKey: ${STORAGE_KEY}
+  - name: uploads
+    azureFile:
+      shareName: uploads
+      storageAccountName: ${STORAGE_ACCOUNT}
+      storageAccountKey: ${STORAGE_KEY}

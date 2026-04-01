@@ -188,7 +188,7 @@
             evt = await EventService.GetEventByIdAsync(EventId);
             if (evt == null)
             {
-                NavigationManager.NavigateTo("/admin/events");
+                NavigationManager.NavigateTo("/admin/events", forceLoad: true);
                 return;
             }
             allParticipants = await ParticipantQueryService.GetParticipantsAsync(EventId);

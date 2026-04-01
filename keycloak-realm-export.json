@@ -1,0 +1,110 @@
+{
+  "realm": "eventcenter",
+  "displayName": "EventCenter",
+  "enabled": true,
+  "sslRequired": "external",
+  "registrationAllowed": false,
+  "loginWithEmailAllowed": true,
+  "duplicateEmailsAllowed": false,
+  "resetPasswordAllowed": true,
+  "editUsernameAllowed": false,
+  "bruteForceProtected": true,
+  "accessTokenLifespan": 300,
+  "ssoSessionIdleTimeout": 1800,
+  "ssoSessionMaxLifespan": 36000,
+
+  "roles": {
+    "realm": [
+      {
+        "name": "Admin",
+        "description": "Veranstaltungsadministrator",
+        "composite": false,
+        "clientRole": false
+      },
+      {
+        "name": "Makler",
+        "description": "Makler-Portal Zugang",
+        "composite": false,
+        "clientRole": false
+      }
+    ]
+  },
+
+  "clients": [
+    {
+      "clientId": "eventcenter-app",
+      "name": "EventCenter Web App",
+      "enabled": true,
+      "publicClient": false,
+      "bearerOnly": false,
+      "standardFlowEnabled": true,
+      "implicitFlowEnabled": false,
+      "directAccessGrantsEnabled": false,
+      "serviceAccountsEnabled": false,
+      "authorizationServicesEnabled": false,
+      "secret": "HIER_NEUES_SECRET_GENERIEREN",
+      "redirectUris": [
+        "https://IHRE-DOMAIN.de/*",
+        "http://localhost:5000/*",
+        "https://localhost:7000/*"
+      ],
+      "webOrigins": [
+        "https://IHRE-DOMAIN.de",
+        "http://localhost:5000",
+        "https://localhost:7000"
+      ],
+      "attributes": {
+        "post.logout.redirect.uris": "https://IHRE-DOMAIN.de/*##http://localhost:5000/*##https://localhost:7000/*",
+        "backchannel.logout.session.required": "true"
+      },
+      "protocol": "openid-connect",
+      "fullScopeAllowed": true,
+      "defaultClientScopes": [
+        "web-origins",
+        "profile",
+        "roles",
+        "email"
+      ],
+      "optionalClientScopes": [
+        "address",
+        "phone",
+        "offline_access"
+      ]
+    }
+  ],
+
+  "users": [
+    {
+      "username": "admin",
+      "email": "admin@eventcenter.local",
+      "firstName": "Admin",
+      "lastName": "EventCenter",
+      "enabled": true,
+      "emailVerified": true,
+      "credentials": [
+        {
+          "type": "password",
+          "value": "Test1234!",
+          "temporary": false
+        }
+      ],
+      "realmRoles": ["Admin"]
+    },
+    {
+      "username": "makler",
+      "email": "makler@eventcenter.local",
+      "firstName": "Test",
+      "lastName": "Makler",
+      "enabled": true,
+      "emailVerified": true,
+      "credentials": [
+        {
+          "type": "password",
+          "value": "Test1234!",
+          "temporary": false
+        }
+      ],
+      "realmRoles": ["Makler"]
+    }
+  ]
+}

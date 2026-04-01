@@ -197,7 +197,7 @@ else
             // Verify the logged-in user owns this registration
             if (registration == null || !registration.Email.Equals(userEmail, StringComparison.OrdinalIgnoreCase))
             {
-                NavigationManager.NavigateTo("/portal/events");
+                NavigationManager.NavigateTo("/portal/events", forceLoad: true);
                 return;
             }
         }

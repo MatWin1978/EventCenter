@@ -189,7 +189,7 @@
             else
                 await CompanyService.CreateAsync(company);
 
-            Navigation.NavigateTo("/admin/companies");
+            Navigation.NavigateTo("/admin/companies", forceLoad: true);
         }
         catch (Exception ex)
         {

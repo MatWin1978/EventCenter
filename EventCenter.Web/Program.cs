@@ -26,6 +26,16 @@ var builder = WebApplication.CreateBuilder(args);
 builder.Services.AddRazorComponents()
     .AddInteractiveServerComponents();
 
+// 100 MB Upload-Limit für Blazor Server (SignalR-Nachrichten + Datei-Uploads)
+builder.Services.Configure<Microsoft.AspNetCore.Components.Server.CircuitOptions>(options =>
+{
+    options.MaxBufferedUnacknowledgedRenderBatches = 10;
+});
+builder.WebHost.ConfigureKestrel(options =>
+{
+    options.Limits.MaxRequestBodySize = 104857600; // 100 MB
+});
+
 // Configure DbContext with SQL Server
 builder.Services.AddDbContext<EventCenterDbContext>(options =>
     options.UseSqlServer(
@@ -184,13 +194,19 @@ builder.Services.AddRateLimiter(options =>
 builder.Services.AddScoped<AuthenticationStateProvider, IdentityRevalidatingAuthStateProvider>();
 builder.Services.AddScoped<RevalidatingServerAuthenticationStateProvider, IdentityRevalidatingAuthStateProvider>();
 
+// HTTPS-Port explizit setzen damit UseHttpsRedirection hinter IIS (mehrere Bindings) funktioniert
+var httpsPort = builder.Configuration.GetValue<int?>("HttpsPort");
+if (httpsPort.HasValue)
+{
+    builder.Services.AddHttpsRedirection(options => options.HttpsPort = httpsPort.Value);
+}
+
 var app = builder.Build();
 
 // Configure the HTTP request pipeline.
 if (!app.Environment.IsDevelopment())
 {
     app.UseExceptionHandler("/Error", createScopeForErrors: true);
-    // The default HSTS value is 30 days. You may want to change this for production scenarios, see https://aka.ms/aspnetcore-hsts.
     app.UseHsts();
 }
 
@@ -308,13 +324,10 @@ app.MapGet("/api/cs/guestooevents", async (
     return Results.Ok(events);
 }).RequireAuthorization("GuestooApi");
 
-// Apply migrations automatically in Development environment
-if (app.Environment.IsDevelopment())
+// Apply pending migrations automatically on startup
 {
     using var scope = app.Services.CreateScope();
     var dbContext = scope.ServiceProvider.GetRequiredService<EventCenterDbContext>();
-
-    // Apply pending migrations
     dbContext.Database.Migrate();
 }
 
